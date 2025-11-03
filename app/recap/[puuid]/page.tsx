@@ -24,6 +24,10 @@ import ChampionCard from '@/components/ChampionCard';
 import WinRateChart from '@/components/WinRateChart';
 import AdvancedMetricsCard from '@/components/AdvancedMetricsCard';
 import ShareButton from '@/components/ShareButton';
+import { ShareableRecap } from '@/components/ShareableRecap';
+import { TimelineChart } from '@/components/TimelineChart';
+import { HighlightMoments } from '@/components/HighlightMoments';
+import { SocialComparison } from '@/components/SocialComparison';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -87,7 +91,7 @@ export default function RecapPage() {
     fetchRecap();
   }, [gameName, tagLine]);
 
-  // Function to generate AI insights on-demand
+  // Function to generate AI insights on-demand with MUCH more data
   const generateAIInsights = async () => {
     if (!recap) return;
     
@@ -95,23 +99,59 @@ export default function RecapPage() {
     setAiError('');
 
     try {
-      console.log('Generating AI insights...');
+      console.log('Generating enhanced AI insights...');
+      
+      // Calculate additional metrics for better insights
+      const uniqueChampions = new Set(recap.topChampions.map(c => c.championName)).size;
+      const totalKills = recap.averageKills * recap.totalGames;
+      const totalDeaths = recap.averageDeaths * recap.totalGames;
+      const totalAssists = recap.averageAssists * recap.totalGames;
+      const mainRole = recap.roleStats[0]?.role || 'FILL';
+      const bestChampion = recap.topChampions[0]?.championName || 'Unknown';
+      const worstChampion = recap.topChampions[recap.topChampions.length - 1]?.championName || 'Unknown';
+      
       const response = await fetch('/api/ai-insights', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          // Basic stats
           totalGames: recap.totalGames,
+          wins: recap.wins,
+          losses: recap.losses,
           winRate: recap.overallWinRate.toFixed(1),
+          kda: recap.overallKDA.toFixed(2),
+          avgKills: recap.averageKills.toFixed(1),
+          avgDeaths: recap.averageDeaths.toFixed(1),
+          avgAssists: recap.averageAssists.toFixed(1),
+          
+          // Champion data
           topChampion: recap.topChampions[0]?.championName || 'Unknown',
           topChampionWR: recap.topChampions[0]?.winRate.toFixed(1) || '0',
-          kda: recap.overallKDA.toFixed(2),
+          topChampionGames: recap.topChampions[0]?.games || 0,
+          uniqueChampions: uniqueChampions,
+          bestChampion: bestChampion,
+          worstChampion: worstChampion,
+          
+          // Advanced metrics
           clutchFactor: recap.advancedMetrics?.clutchFactor.toFixed(1) || '0',
           carryPotential: recap.advancedMetrics?.carryPotential.toFixed(1) || '0',
           consistencyScore: recap.advancedMetrics?.consistencyScore.toFixed(0) || '0',
+          
+          // Growth & trends
           peakMonth: recap.advancedMetrics?.peakPerformanceMonth || 'Unknown',
           improvement: recap.advancedMetrics?.earlyVsLateImprovement.improvement.toFixed(1) || '0',
+          bestStreak: recap.bestStreak,
+          worstStreak: recap.worstStreak,
+          currentStreak: recap.currentStreak,
+          
+          // Playstyle indicators
+          mainRole: mainRole,
+          roleFlexibility: recap.roleStats.length > 2 ? 'High' : 'Low',
+          aggressionScore: recap.overallKDA > 3 ? 'Calculated' : recap.overallKDA < 2 ? 'Aggressive' : 'Balanced',
+          teamfightScore: recap.averageAssists > 8 ? 'High' : 'Moderate',
+          objectiveScore: 'Average', // Placeholder - would need more data
         }),
       });
 
@@ -121,7 +161,7 @@ export default function RecapPage() {
 
       const data = await response.json();
       setAiInsights(data.insights);
-      console.log('AI insights generated successfully');
+      console.log('Enhanced AI insights generated successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate AI insights';
       setAiError(errorMessage);
@@ -351,25 +391,79 @@ export default function RecapPage() {
               </div>
             )}
 
-            {/* AI Insights - Diseño Creativo */}
-            <div className="relative overflow-hidden">
-              {aiInsights || recap.aiInsights ? (
-                <div className="bg-gradient-to-br from-[#6366F1]/20 to-[#E0EDFF]/5 rounded-lg p-6 border border-[#6366F1]/30">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-lg bg-[#6366F1] flex items-center justify-center flex-shrink-0">
-                      <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            {/* Timeline Charts - NEW! */}
+            {recap.monthlyTimeline && recap.monthlyTimeline.length > 0 && (
+              <TimelineChart data={recap.monthlyTimeline} />
+            )}
+
+            {/* Highlight Moments - NEW! */}
+            {recap.highlightMoments && recap.highlightMoments.length > 0 && (
+              <HighlightMoments highlights={recap.highlightMoments} />
+            )}
+
+            {/* Social Comparison - NEW! */}
+            <SocialComparison currentPlayer={recap} />
+
+            {/* AI Insights - 4 Grid Layout */}
+            <div className="relative overflow-hidden">{aiInsights || recap.aiInsights ? (
+                <>
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#FFFAFA] mb-1">AI Performance Analysis</h2>
+                      <p className="text-sm text-[#E0EDFF]/60">Powered by AWS Bedrock Claude</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const modal = document.getElementById('share-modal');
+                        if (modal) {
+                          modal.classList.remove('hidden');
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#6366F1] hover:bg-[#6366F1]/90 text-white font-semibold transition-all"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                       </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-[#FFFAFA] mb-1">AI Performance Analysis</h3>
-                      <p className="text-xs text-[#E0EDFF]/60 mb-3">Powered by AWS Bedrock Claude</p>
-                      <p className="text-sm text-[#FFFAFA]/90 leading-relaxed whitespace-pre-line">
-                        {aiInsights || recap.aiInsights}
-                      </p>
-                    </div>
+                      Share Recap
+                    </button>
                   </div>
-                </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(() => {
+                      const sections = (aiInsights || recap.aiInsights || '').split('|||').filter(s => s.trim());
+                      const parsedSections = [];
+                      for (let i = 0; i < sections.length; i += 2) {
+                        if (sections[i] && sections[i + 1]) {
+                          parsedSections.push({
+                            title: sections[i].trim(),
+                            content: sections[i + 1].trim()
+                          });
+                        }
+                      }
+
+                      return parsedSections.map((section, index) => (
+                        <div 
+                          key={index}
+                          className="bg-gradient-to-br from-[#1C1E22] to-[#23262A] rounded-lg p-6 border border-[#6366F1]/20 hover:border-[#6366F1]/40 transition-all"
+                        >
+                          <div className="flex items-start gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-lg bg-[#6366F1]/20 flex items-center justify-center flex-shrink-0">
+                              <span className="text-[#6366F1] font-bold">{index + 1}</span>
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-bold text-[#6366F1] uppercase tracking-wide">
+                                {section.title}
+                              </h3>
+                            </div>
+                          </div>
+                          <p className="text-[#FFFAFA]/90 leading-relaxed text-sm">
+                            {section.content}
+                          </p>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </>
               ) : (
                 <div className="bg-gradient-to-br from-[#6366F1]/10 to-transparent rounded-lg p-8 border border-[#6366F1]/20 text-center">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#6366F1]/20 flex items-center justify-center">
@@ -420,6 +514,60 @@ export default function RecapPage() {
           <p className="text-xs text-[#E0EDFF]/50">
             Data provided by Riot Games API
           </p>
+        </div>
+      </div>
+
+      {/* Share Modal - Spotify Wrapped Style */}
+      <div 
+        id="share-modal"
+        className="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            e.currentTarget.classList.add('hidden');
+          }
+        }}
+      >
+        <div className="min-h-screen px-4 py-8 flex items-center justify-center">
+          <div className="relative max-w-lg w-full">
+            <button
+              onClick={() => {
+                const modal = document.getElementById('share-modal');
+                if (modal) modal.classList.add('hidden');
+              }}
+              className="absolute -top-4 -right-4 w-10 h-10 rounded-full bg-[#6366F1] hover:bg-[#6366F1]/90 flex items-center justify-center text-white transition-all z-10"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="space-y-4">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-white mb-2">Your 2024 Wrapped</h2>
+                <p className="text-white/70">Tap any slide to download and share</p>
+              </div>
+
+              {aiInsights && (
+                <ShareableRecap 
+                  player={{
+                    gameName: recap.player.gameName,
+                    tagLine: recap.player.tagLine,
+                    profileIconId: recap.player.profileIconId || 29
+                  }}
+                  stats={{
+                    totalGames: recap.totalGames,
+                    wins: recap.wins,
+                    losses: recap.losses,
+                    winRate: recap.overallWinRate,
+                    kda: recap.overallKDA,
+                    topChampion: recap.topChampions[0]?.championName || 'Unknown',
+                    topChampionWR: recap.topChampions[0]?.winRate || 0
+                  }}
+                  aiInsights={aiInsights}
+                />
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

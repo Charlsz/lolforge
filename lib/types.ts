@@ -75,6 +75,39 @@ export interface AdvancedMetrics {
   };
 }
 
+// Timeline data for charts
+export interface MonthlyTimeline {
+  month: string; // "2024-10"
+  games: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  avgKDA: number;
+  avgKills: number;
+  avgDeaths: number;
+  avgAssists: number;
+}
+
+// Highlight moments
+export interface HighlightMoment {
+  type: 'best_game' | 'biggest_comeback' | 'worst_loss' | 'longest_game' | 'pentakill';
+  matchId: string;
+  title: string;
+  description: string;
+  stats: {
+    kda: number;
+    kills: number;
+    deaths: number;
+    assists: number;
+    championName: string;
+    gameDuration: number;
+    win: boolean;
+    goldEarned?: number;
+    killParticipation?: number;
+  };
+  date: number; // timestamp
+}
+
 export interface PlayerRecap {
   player: PlayerAccount;
   totalGames: number;
@@ -90,6 +123,8 @@ export interface PlayerRecap {
   averageKills: number;
   averageDeaths: number;
   averageAssists: number;
-  advancedMetrics?: AdvancedMetrics; // New!
+  advancedMetrics?: AdvancedMetrics;
+  monthlyTimeline?: MonthlyTimeline[]; // NEW!
+  highlightMoments?: HighlightMoment[]; // NEW!
   aiInsights?: string | null;
 }

@@ -12,50 +12,80 @@ const client = new BedrockRuntimeClient({
 });
 
 export async function generateYearRecapInsights(playerStats: any) {
-  const prompt = `You are an expert League of Legends analyst providing deep insights that go BEYOND basic stats.
+  const prompt = `You are an elite and funny League of Legends performance coach and data scientist. Analyze this player's COMPLETE year and provide insights that would cost $50+ from a personal coach.
 
-PLAYER DATA:
-Basic Stats:
-- Games played: ${playerStats.totalGames}
-- Win rate: ${playerStats.winRate}%
-- Main champion: ${playerStats.topChampion} with ${playerStats.topChampionStats?.wr || '0'}% WR
-- Average KDA: ${playerStats.kda}
+ COMPLETE PLAYER PROFILE:
 
-🚀 ADVANCED METRICS (These make us unique!):
+BASIC PERFORMANCE:
+- Total Games: ${playerStats.totalGames}
+- Win Rate: ${playerStats.winRate}% (${playerStats.wins || 0}W / ${playerStats.losses || 0}L)
+- Overall KDA: ${playerStats.kda}
+- Average K/D/A: ${playerStats.avgKills || 0}/${playerStats.avgDeaths || 0}/${playerStats.avgAssists || 0}
+
+ CHAMPION MASTERY:
+- Main: ${playerStats.topChampion} (${playerStats.topChampionWR}% WR, ${playerStats.topChampionGames || 0} games)
+- Champion Pool: ${playerStats.uniqueChampions || 'Unknown'} unique champions
+- Most Consistent: ${playerStats.bestChampion || playerStats.topChampion}
+- Needs Work: ${playerStats.worstChampion || 'Multiple champions'}
+
+ ADVANCED PERFORMANCE METRICS:
 - Clutch Factor: ${playerStats.clutchFactor}% (Comeback win rate when behind)
-- Carry Potential: ${playerStats.carryPotential}% (Games with >60% kill participation)
+- Carry Potential: ${playerStats.carryPotential}% (High kill participation games)
 - Consistency Score: ${playerStats.consistencyScore}/100 (Performance stability)
-- Peak Month: ${playerStats.peakMonth} (Best performing period)
-- Improvement: ${playerStats.improvement > 0 ? '+' : ''}${playerStats.improvement}% (Late season vs early season)
+- Adaptability: ${playerStats.roleFlexibility || 'Moderate'} (Multi-role capability)
 
-YOUR JOB:
-Write 3 unique, analytical paragraphs that use these ADVANCED metrics:
+ GROWTH & TRENDS:
+- Peak Performance: ${playerStats.peakMonth} (Best month)
+- Season Growth: ${playerStats.improvement > 0 ? '+' : ''}${playerStats.improvement}% (Early vs Late season)
+- Best Streak: ${playerStats.bestStreak || 0} wins
+- Worst Streak: ${playerStats.worstStreak || 0} losses
+- Current Streak: ${playerStats.currentStreak || 0} games
 
-PARAGRAPH 1 - DEEP PERFORMANCE ANALYSIS:
-Go beyond win rate. Analyze their clutch factor, consistency, and carry potential.
-Example: "Your 35% clutch factor shows you thrive under pressure, winning comebacks..."
+ PLAYSTYLE INDICATORS:
+- Primary Role: ${playerStats.mainRole || 'Flex'}
+- Aggression Level: ${playerStats.aggressionScore || 'Balanced'} (Based on KDA pattern)
+- Team Fight Presence: ${playerStats.teamfightScore || 'Moderate'}
+- Objective Focus: ${playerStats.objectiveScore || 'Average'}
 
-PARAGRAPH 2 - GROWTH TRAJECTORY:
-Use the improvement stat and peak month to tell their story.
-Are they improving? Declining? Plateauing?
-Example: "You peaked in ${playerStats.peakMonth} but showed ${playerStats.improvement > 0 ? 'positive growth' : 'some decline'} late season..."
+YOUR MISSION:
+Write a compelling, data-driven 2024 League of Legends recap in 4 distinct sections. Each section should be separated by "|||" and formatted as: TITLE|||CONTENT
 
-PARAGRAPH 3 - UNIQUE ACTIONABLE ADVICE:
-Based on their specific advanced metrics, give targeted improvement tips.
-Example: "Your low consistency score (${playerStats.consistencyScore}/100) suggests focusing on..."
+Return ONLY the 4 sections separated by "|||" with NO markdown, NO asterisks, NO bold text, NO emojis. Write naturally as if a human analyst wrote it.
 
-TONE: Analytical, specific, data-driven. Reference the advanced metrics explicitly.
+Format: SECTION_TITLE|||Section content here.
+
+SECTION 1 - YOUR SIGNATURE PLAYSTYLE (2-3 sentences):
+Identify their unique playstyle based on ALL metrics above. Use specific numbers. Be direct and conversational.
+Example: "YOUR SIGNATURE PLAYSTYLE|||With a 67% clutch factor, you're a pressure player who thrives in comeback scenarios. Combined with 45% carry potential and a 3.5 KDA, you're the person teams want when games get tight. Your Ahri mastery at 58% win rate across 45 games shows commitment to perfection."
+
+SECTION 2 - THE YEAR IN REVIEW (2-3 sentences):
+Tell the story of their year using growth metrics, streaks, and peak performance. Make it narrative and engaging.
+Example: "THE YEAR IN REVIEW|||You peaked in October, crushing a 7-game win streak that defined your best month. The season had ups and downs, but your 8% late-season improvement shows you finished stronger than you started. From 120 total games, you carved out a 54% win rate through sheer consistency."
+
+SECTION 3 - HIDDEN STRENGTHS & BLIND SPOTS (2-3 sentences):
+Reveal something they might not know using advanced metrics. Be insightful and honest.
+Example: "HIDDEN STRENGTHS & BLIND SPOTS|||Your 72 out of 100 consistency score reveals some volatility. Some games you hard carry with 15 kills, others you struggle to find your footing. While your Ahri is clearly your strongest pick, spreading your champion pool to 8 unique champions might be diluting your impact."
+
+SECTION 4 - YOUR 2025 IMPROVEMENT ROADMAP (2-3 sentences):
+Give SPECIFIC, actionable advice based on their exact metrics. Be a coach, not a motivational speaker.
+Example: "YOUR 2025 IMPROVEMENT ROADMAP|||Focus on bringing that 67% clutch factor even higher by reviewing your close games and identifying decision patterns. Your 4-loss streak suggests mental reset issues, so implement a rule to take breaks after 2 consecutive losses. Dedicate 70% of your practice time to your main champion to push that win rate from 58% to 65%."
 
 CRITICAL RULES:
-- Do NOT write "Here's", "In summary", or any preamble
-- Start directly with the content
-- Use emojis sparingly (max 3-4 total)
-- Reference ADVANCED metrics (clutch factor, consistency, etc.)
-- Make it feel like premium analysis, not generic feedback`;
+- Use ACTUAL numbers extensively
+- Write in plain text, NO markdown formatting whatsoever
+- NO asterisks, NO bold (**), NO emojis, NO bullet points
+- Separate each section with "|||"
+- Format: TITLE|||Content
+- Be direct, analytical, and conversational
+- Sound like a human analyst, not an AI
+- Reference specific metrics and numbers
+- Give actionable advice, not platitudes
+
+Write it now:`;
 
   const payload = {
     anthropic_version: "bedrock-2023-05-31",
-    max_tokens: 500,
+    max_tokens: 800,
     messages: [
       {
         role: "user",

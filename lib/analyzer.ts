@@ -1,4 +1,4 @@
-import { MatchInfo, ChampionStats, RoleStats, PlayerAccount, PlayerRecap, AdvancedMetrics } from './types';
+import { MatchInfo, ChampionStats, RoleStats, PlayerAccount, PlayerRecap, AdvancedMetrics, MonthlyTimeline, HighlightMoment, MatchParticipant } from './types';
 
 export class MatchAnalyzer {
   private matches: MatchInfo[];
@@ -316,6 +316,243 @@ export class MatchAnalyzer {
     };
   }
 
+  // 📊 TIMELINE DATA - Monthly progression
+  public getMonthlyTimeline(): MonthlyTimeline[] {
+    const monthlyData = new Map<string, {
+      games: number;
+      wins: number;
+      losses: number;
+      totalKills: number;
+      totalDeaths: number;
+      totalAssists: number;
+    }>();
+
+    // Sort matches by date
+    const sortedMatches = [...this.matches].sort((a, b) => a.gameCreation - b.gameCreation);
+
+    sortedMatches.forEach(match => {
+      const playerData = this.getPlayerData(match);
+      if (!playerData) return;
+
+      const date = new Date(match.gameCreation);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+      if (!monthlyData.has(monthKey)) {
+        monthlyData.set(monthKey, {
+          games: 0,
+          wins: 0,
+          losses: 0,
+          totalKills: 0,
+          totalDeaths: 0,
+          totalAssists: 0,
+        });
+      }
+
+      const stats = monthlyData.get(monthKey)!;
+      stats.games++;
+      if (playerData.win) {
+        stats.wins++;
+      } else {
+        stats.losses++;
+      }
+      stats.totalKills += playerData.kills;
+      stats.totalDeaths += playerData.deaths;
+      stats.totalAssists += playerData.assists;
+    });
+
+    // Convert to array and calculate averages
+    const timeline: MonthlyTimeline[] = [];
+    monthlyData.forEach((stats, month) => {
+      const winRate = stats.games > 0 ? (stats.wins / stats.games) * 100 : 0;
+      const avgKills = stats.games > 0 ? stats.totalKills / stats.games : 0;
+      const avgDeaths = stats.games > 0 ? stats.totalDeaths / stats.games : 0;
+      const avgAssists = stats.games > 0 ? stats.totalAssists / stats.games : 0;
+      const avgKDA = avgDeaths > 0 ? (avgKills + avgAssists) / avgDeaths : avgKills + avgAssists;
+
+      timeline.push({
+        month,
+        games: stats.games,
+        wins: stats.wins,
+        losses: stats.losses,
+        winRate,
+        avgKDA,
+        avgKills,
+        avgDeaths,
+        avgAssists,
+      });
+    });
+
+    // Sort by month
+    return timeline.sort((a, b) => a.month.localeCompare(b.month));
+  }
+
+  // 🌟 HIGHLIGHT MOMENTS - Best games and achievements
+  public getHighlightMoments(): HighlightMoment[] {
+    const highlights: HighlightMoment[] = [];
+
+    interface GameRecord {
+      match: MatchInfo;
+      playerData: MatchParticipant;
+      kda: number;
+      goldDiff?: number;
+    }
+
+    let bestGame: GameRecord | null = null;
+    let biggestComeback: GameRecord | null = null;
+    let worstLoss: GameRecord | null = null;
+    let longestGame: GameRecord | null = null;
+
+    this.matches.forEach(match => {
+      const playerData = this.getPlayerData(match);
+      if (!playerData) return;
+
+      const kda = playerData.deaths > 0
+        ? (playerData.kills + playerData.assists) / playerData.deaths
+        : playerData.kills + playerData.assists;
+
+      // Best Game (highest KDA in a win)
+      if (playerData.win) {
+        if (!bestGame || kda > bestGame.kda) {
+          bestGame = { match, playerData, kda };
+        }
+      }
+
+      // Biggest Comeback (won despite low gold)
+      if (playerData.win) {
+        const avgGold = match.participants.reduce((sum, p) => sum + p.goldEarned, 0) / 10;
+        const goldDiff = avgGold - playerData.goldEarned;
+        if (goldDiff > 0 && (!biggestComeback || (biggestComeback.goldDiff && goldDiff > biggestComeback.goldDiff))) {
+          biggestComeback = { match, playerData, kda, goldDiff };
+        }
+      }
+
+      // Worst Loss (lowest KDA in a loss)
+      if (!playerData.win) {
+        if (!worstLoss || kda < worstLoss.kda) {
+          worstLoss = { match, playerData, kda };
+        }
+      }
+
+      // Longest Game
+      if (!longestGame || match.gameDuration > longestGame.match.gameDuration) {
+        longestGame = { match, playerData, kda };
+      }
+
+      // Pentakill detection (if kills >= 5 in one game)
+      if (playerData.kills >= 5 && playerData.win) {
+        const teamKills = match.participants
+          .filter(p => p.win === playerData.win)
+          .reduce((sum, p) => sum + p.kills, 0);
+        const killParticipation = teamKills > 0
+          ? ((playerData.kills + playerData.assists) / teamKills) * 100
+          : 0;
+
+        highlights.push({
+          type: 'pentakill',
+          matchId: match.matchId,
+          title: 'Pentakill Performance',
+          description: `Dominated with ${playerData.kills} kills on ${playerData.championName}`,
+          stats: {
+            kda,
+            kills: playerData.kills,
+            deaths: playerData.deaths,
+            assists: playerData.assists,
+            championName: playerData.championName,
+            gameDuration: match.gameDuration,
+            win: playerData.win,
+            killParticipation,
+          },
+          date: match.gameCreation,
+        });
+      }
+    });
+
+    // Add best game
+    if (bestGame) {
+      const game = bestGame as GameRecord;
+      const teamKills = game.match.participants
+        .filter(p => p.win === game.playerData.win)
+        .reduce((sum, p) => sum + p.kills, 0);
+      const killParticipation = teamKills > 0
+        ? ((game.playerData.kills + game.playerData.assists) / teamKills) * 100
+        : 0;
+
+      highlights.unshift({
+        type: 'best_game',
+        matchId: game.match.matchId,
+        title: 'Your Best Game',
+        description: `${game.kda.toFixed(2)} KDA on ${game.playerData.championName}`,
+        stats: {
+          kda: game.kda,
+          kills: game.playerData.kills,
+          deaths: game.playerData.deaths,
+          assists: game.playerData.assists,
+          championName: game.playerData.championName,
+          gameDuration: game.match.gameDuration,
+          win: true,
+          killParticipation,
+        },
+        date: game.match.gameCreation,
+      });
+    }
+
+    // Add biggest comeback
+    if (biggestComeback) {
+      const game = biggestComeback as GameRecord;
+      if (game.goldDiff) {
+        const teamKills = game.match.participants
+          .filter(p => p.win === game.playerData.win)
+          .reduce((sum, p) => sum + p.kills, 0);
+        const killParticipation = teamKills > 0
+          ? ((game.playerData.kills + game.playerData.assists) / teamKills) * 100
+          : 0;
+
+        highlights.push({
+          type: 'biggest_comeback',
+          matchId: game.match.matchId,
+          title: 'Biggest Comeback',
+          description: `Won despite being ${Math.round(game.goldDiff)} gold behind`,
+          stats: {
+            kda: game.playerData.deaths > 0
+              ? (game.playerData.kills + game.playerData.assists) / game.playerData.deaths
+              : game.playerData.kills + game.playerData.assists,
+            kills: game.playerData.kills,
+            deaths: game.playerData.deaths,
+            assists: game.playerData.assists,
+            championName: game.playerData.championName,
+            gameDuration: game.match.gameDuration,
+            win: true,
+            goldEarned: game.playerData.goldEarned,
+          },
+          date: game.match.gameCreation,
+        });
+      }
+    }
+
+    // Add longest game
+    if (longestGame) {
+      const game = longestGame as GameRecord;
+      highlights.push({
+        type: 'longest_game',
+        matchId: game.match.matchId,
+        title: 'Marathon Match',
+        description: `${Math.floor(game.match.gameDuration / 60)} minutes of intense gameplay`,
+        stats: {
+          kda: game.kda,
+          kills: game.playerData.kills,
+          deaths: game.playerData.deaths,
+          assists: game.playerData.assists,
+          championName: game.playerData.championName,
+          gameDuration: game.match.gameDuration,
+          win: game.playerData.win,
+        },
+        date: game.match.gameCreation,
+      });
+    }
+
+    return highlights;
+  }
+
   // Generate complete recap
   public generateRecap(player: PlayerAccount): PlayerRecap {
     const overallStats = this.getOverallStats();
@@ -323,6 +560,8 @@ export class MatchAnalyzer {
     const roleStats = this.getRoleStats();
     const streaks = this.getStreaks();
     const advancedMetrics = this.getAdvancedMetrics();
+    const monthlyTimeline = this.getMonthlyTimeline();
+    const highlightMoments = this.getHighlightMoments();
 
     return {
       player,
@@ -331,6 +570,8 @@ export class MatchAnalyzer {
       roleStats,
       ...streaks,
       advancedMetrics,
+      monthlyTimeline,
+      highlightMoments,
     };
   }
 }
