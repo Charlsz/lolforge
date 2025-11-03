@@ -1,18 +1,79 @@
+/*
+ * LANDING PAGE - Parámetros de Estilo Personalizables
+ * 
+ * BACKGROUND:
+ * - Imagen: /background.png (cambiar en línea src="/background.png")
+ * - quality: 100 (calidad de imagen, rango 1-100)
+ * - object-cover: cubre toda la pantalla, puede cambiar a object-contain
+ * 
+ * LOGO PEQUEÑO (Header):
+ * - Tamaño: 100x100px (cambiar width={100} height={100})
+ * - Posición: px-8 pt-8 (padding horizontal 8, padding top 8)
+ * - Texto "LOLFORGE": text-2xl (tamaño), tracking-[0.2em] (espacio entre letras)
+ * 
+ * DESCRIPCIÓN (Píldora blanca):
+ * - Posición: arriba del logo grande
+ * - Fondo: bg-white/70 (blanco con 70% opacidad)
+ * - Padding: px-8 py-3 (horizontal 8, vertical 3)
+ * - Tamaño texto: text-base (16px)
+ * - Bordes redondeados: rounded-full
+ * 
+ * LOGO GRANDE (Centro):
+ * - Tamaño: 500x500px (cambiar width={500} height={500})
+ * - max-w-[500px]: tamaño máximo en responsive
+ * 
+ * TEXTO "LOLFORGE" (Debajo del logo):
+ * - "LOL": text-6xl (tamaño 60px), text-[#40E0D0] (color turquesa)
+ * - "FORGE": text-6xl, text-[#2C2C2C] (color gris oscuro)
+ * - tracking-[0.3em] / tracking-[0.08em]: espacio entre letras
+ * - gap-2: espacio entre LOL y FORGE
+ * 
+ * BARRA DE BÚSQUEDA:
+ * - Ancho máximo: max-w-md (28rem / 448px)
+ * - Fondo: bg-white (blanco sólido)
+ * - Padding: px-6 py-4
+ * - Bordes redondeados: rounded-full
+ * - Ícono: h-6 w-6 text-gray-400
+ * - Input: text-lg (18px)
+ * 
+ * ESPACIADO GENERAL:
+ * - gap-8: espacio entre elementos principales (32px)
+ * - gap-6: espacio en sección logo/título (24px)
+ * - pb-20: padding bottom del contenido principal (80px)
+ */
+
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function Home() {
-  const [gameName, setGameName] = useState('');
-  const [tagLine, setTagLine] = useState('');
+  const [searchValue, setSearchValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError('');
+
+    const trimmed = searchValue.trim();
+
+    if (!trimmed.includes('#')) {
+      setError('Introduce tu invocador como GameName#TAG.');
+      return;
+    }
+
+    const [rawGameName, rawTagLine] = trimmed.split('#');
+    const gameName = rawGameName?.trim();
+    const tagLine = rawTagLine?.trim();
+
+    if (!gameName || !tagLine) {
+      setError('Introduce tu invocador como GameName#TAG.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -33,128 +94,92 @@ export default function Home() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400/20 dark:bg-purple-600/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-400/20 dark:bg-blue-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      </div>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Background Image - Modificar: src para cambiar imagen, quality para calidad */}
+      <Image
+        src="/background.png"
+        alt="Background"
+        fill
+        priority
+        className="object-cover"
+        quality={100}
+      />
 
-      <main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-16">
-        {/* Hero Section */}
-        <div className="w-full max-w-2xl text-center mb-12">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-purple-900 to-blue-900 dark:from-white dark:via-purple-200 dark:to-blue-200 bg-clip-text text-transparent">
-            LOL Forge
-          </h1>
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-xl mx-auto leading-relaxed">
-            Discover your League of Legends performance recap. Analyze your stats, champions, and gameplay patterns.
-          </p>
-        </div>
-
-        {/* Search Form */}
-        <div className="w-full max-w-md">
-          <div className="relative overflow-hidden rounded-3xl bg-white/60 dark:bg-white/5 backdrop-blur-2xl border border-white/40 dark:border-white/10 p-8 shadow-2xl shadow-black/5 dark:shadow-black/20">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label htmlFor="gameName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Game Name
-                </label>
-                <input
-                  type="text"
-                  id="gameName"
-                  value={gameName}
-                  onChange={(e) => setGameName(e.target.value)}
-                  placeholder="Enter your game name"
-                  required
-                  disabled={isLoading}
-                  className="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+      {/* Content */}
+      <div className="relative z-10 flex min-h-screen flex-col">
+        {/* Header con logo a la izquierda y texto centrado arriba */}
+        <header className="px-8 pt-8">
+          <div className="relative flex items-start gap-8">
+            {/* Logo pequeño a la izquierda - z-10 para estar encima */}
+            <a href="/" className="hover:opacity-80 transition-opacity flex-shrink-0 z-10 relative">
+              <Image
+                src="/logo.png"
+                alt="LOLFORGE"
+                width={100}
+                height={100}
+                className="h-[100px] w-[100px]"
+              />
+            </a>
+            {/* Texto descriptivo - Modificar: translate-x-[Xpx] para mover (ejemplo: translate-x-[100px] = 100px derecha, translate-x-[-100px] = 100px izquierda) */}
+            <div className="flex items-center flex-1 justify-center translate-x-[-50px] translate-y-[20px] pointer-events-none">
+              <div className="rounded-full bg-white/70 px-8 py-3 text-base font-medium text-slate-700 shadow-lg backdrop-blur-sm max-w-4xl pointer-events-auto select-text">
+                Discover your League of Legends performance recap. Analyze your stats, champions, and gameplay patterns.
               </div>
+            </div>
+          </div>
+        </header>
 
-              <div>
-                <label htmlFor="tagLine" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tag Line
-                </label>
-                <input
-                  type="text"
-                  id="tagLine"
-                  value={tagLine}
-                  onChange={(e) => setTagLine(e.target.value)}
-                  placeholder="Enter your tag (e.g., NA1)"
-                  required
-                  disabled={isLoading}
-                  className="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 dark:focus:ring-purple-400/50 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
+        {/* Main content - Modificar: gap-8 para espaciado, pb-20 para margen inferior */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-8 px-4 pb-20 text-center translate-y-[-100px]">
+          {/* Logo grande clickeable */}
+          <a href="/" className="hover:scale-105 transition-transform">
+            <Image
+              src="/logo.png"
+              alt="LOLFORGE"
+              width={500}
+              height={500}
+              className="h-auto w-full max-w-[500px]"
+            />
+          </a>
 
-              {error && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 dark:from-purple-500 dark:to-blue-500 dark:hover:from-purple-600 dark:hover:to-blue-600 text-white font-medium shadow-lg shadow-purple-500/25 dark:shadow-purple-500/20 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98]"
+          {/* Search form - Modificar: max-w-md para ancho máximo */}
+          <form onSubmit={handleSubmit} className="w-full max-w-md">
+            {/* Barra de búsqueda - Modificar: rounded-full para forma, bg-white para fondo, px-6 py-4 para padding */}
+            <div className="flex items-center gap-3 rounded-full bg-white px-6 py-4 shadow-xl">
+              {/* Ícono de búsqueda - Modificar: h-6 w-6 para tamaño, text-gray-400 para color */}
+              <svg
+                aria-hidden
+                className="h-6 w-6 flex-shrink-0 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
               >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Loading...
-                  </span>
-                ) : (
-                  'Generate Recap'
-                )}
-              </button>
-            </form>
-
-            {/* Subtle gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/0 to-purple-500/5 dark:to-purple-500/5 pointer-events-none" />
-          </div>
-
-          {/* Helper text */}
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-            Example: Game Name "Player123" with Tag "NA1"
-          </p>
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              {/* Input - Modificar: text-lg para tamaño de texto, placeholder para texto de ejemplo */}
+              <input
+                type="text"
+                value={searchValue}
+                onChange={(event) => setSearchValue(event.target.value)}
+                placeholder="Search Summoner#TAG"
+                disabled={isLoading}
+                className="flex-1 bg-transparent text-lg text-gray-700 placeholder:text-gray-400 focus:outline-none"
+              />
+            </div>
+            {/* Mensajes de error/carga - Modificar: mt-3 para espacio superior, text-sm para tamaño */}
+            {error && (
+              <p className="mt-3 text-sm font-medium text-red-100 drop-shadow">{error}</p>
+            )}
+            {isLoading && !error && (
+              <p className="mt-3 text-sm font-medium text-white drop-shadow">Buscando...</p>
+            )}
+          </form>
         </div>
-
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mt-16">
-          <div className="text-center p-6 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 dark:from-purple-500/10 dark:to-blue-500/10 flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Detailed Stats</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Complete analysis of your performance</p>
-          </div>
-
-          <div className="text-center p-6 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 dark:from-purple-500/10 dark:to-blue-500/10 flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Champion Insights</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Your top champions and win rates</p>
-          </div>
-
-          <div className="text-center p-6 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 dark:from-purple-500/10 dark:to-blue-500/10 flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-              </svg>
-            </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Streak Tracking</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Monitor your winning and losing streaks</p>
-          </div>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
