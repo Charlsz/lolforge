@@ -7,6 +7,8 @@ interface SocialComparisonProps {
   currentPlayer: PlayerRecap;
 }
 
+const DDRAGON_VERSION = '14.23.1';
+
 export function SocialComparison({ currentPlayer }: SocialComparisonProps) {
   const [friendTag, setFriendTag] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,19 +28,18 @@ export function SocialComparison({ currentPlayer }: SocialComparisonProps) {
     try {
       const [gameName, tagLine] = friendTag.split('#');
       
-      // First get player info
-      const playerRes = await fetch(`/api/player?gameName=${encodeURIComponent(gameName)}&tagLine=${encodeURIComponent(tagLine)}`);
-      if (!playerRes.ok) throw new Error('Player not found');
+      // Get friend's recap directly with gameName and tagLine
+      const recapRes = await fetch(`/api/recap?gameName=${encodeURIComponent(gameName)}&tagLine=${encodeURIComponent(tagLine)}`);
       
-      const playerData = await playerRes.json();
-
-      // Then get their recap
-      const recapRes = await fetch(`/api/recap?puuid=${playerData.puuid}`);
-      if (!recapRes.ok) throw new Error('Could not load friend stats');
+      if (!recapRes.ok) {
+        const errorData = await recapRes.json();
+        throw new Error(errorData.error || 'Could not load friend stats');
+      }
 
       const recapData = await recapRes.json();
       setFriendData(recapData);
     } catch (err) {
+      console.error('Error comparing friend:', err);
       setError(err instanceof Error ? err.message : 'Failed to load friend');
     } finally {
       setIsLoading(false);
@@ -122,17 +123,44 @@ export function SocialComparison({ currentPlayer }: SocialComparisonProps) {
       {/* Comparison Results */}
       {friendData && (
         <div>
-          {/* Player Names */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="text-center">
-              <div className="text-sm font-bold text-[#6366F1]">
+          {/* Player Names with Profile Icons */}
+          <div className="grid grid-cols-3 gap-2 mb-6">
+            {/* Current Player */}
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-[#6366F1] mb-2">
+                <img 
+                  src={`https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/profileicon/${currentPlayer.player.profileIconId || 29}.png`}
+                  alt={currentPlayer.player.gameName}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/profileicon/29.png`;
+                  }}
+                />
+              </div>
+              <div className="text-sm font-bold text-[#6366F1] text-center">
                 {currentPlayer.player.gameName}
               </div>
               <div className="text-xs text-[#E0EDFF]/60">You</div>
             </div>
-            <div></div>
-            <div className="text-center">
-              <div className="text-sm font-bold text-[#6366F1]">
+
+            {/* VS Divider */}
+            <div className="flex items-center justify-center">
+              <div className="text-2xl font-bold text-[#E0EDFF]/40">VS</div>
+            </div>
+
+            {/* Friend */}
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-[#6366F1] mb-2">
+                <img 
+                  src={`https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/profileicon/${friendData.player.profileIconId || 29}.png`}
+                  alt={friendData.player.gameName}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/profileicon/29.png`;
+                  }}
+                />
+              </div>
+              <div className="text-sm font-bold text-[#6366F1] text-center">
                 {friendData.player.gameName}
               </div>
               <div className="text-xs text-[#E0EDFF]/60">Friend</div>
@@ -151,25 +179,62 @@ export function SocialComparison({ currentPlayer }: SocialComparisonProps) {
 
           {/* Champion Comparison */}
           <div className="mt-6 bg-[#23262A] rounded-lg p-4">
-            <div className="text-xs text-[#E0EDFF]/60 mb-3 text-center uppercase tracking-wide">
+            <div className="text-xs text-[#E0EDFF]/60 mb-4 text-center uppercase tracking-wide">
               Most Played Champions
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="text-sm font-semibold text-[#FFFAFA] mb-1">
-                  {currentPlayer.topChampions[0]?.championName || 'N/A'}
-                </div>
-                <div className="text-xs text-[#E0EDFF]/60">
-                  {currentPlayer.topChampions[0]?.games || 0} games • {currentPlayer.topChampions[0]?.winRate.toFixed(0) || 0}% WR
-                </div>
+            <div className="grid grid-cols-2 gap-6">
+              {/* Current Player Champion */}
+              <div className="flex flex-col items-center">
+                {currentPlayer.topChampions[0] ? (
+                  <>
+                    <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#6366F1]/30 mb-2">
+                      <img 
+                        src={`https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/champion/${currentPlayer.topChampions[0].championName}.png`}
+                        alt={currentPlayer.topChampions[0].championName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => e.currentTarget.style.display = 'none'}
+                      />
+                    </div>
+                    <div className="text-sm font-semibold text-[#FFFAFA] mb-1 text-center">
+                      {currentPlayer.topChampions[0].championName}
+                    </div>
+                    <div className="text-xs text-[#E0EDFF]/60 text-center">
+                      {currentPlayer.topChampions[0].games} games
+                    </div>
+                    <div className={`text-xs font-semibold mt-1 ${currentPlayer.topChampions[0].winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
+                      {currentPlayer.topChampions[0].winRate.toFixed(0)}% WR
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-[#E0EDFF]/60">N/A</div>
+                )}
               </div>
-              <div className="text-center">
-                <div className="text-sm font-semibold text-[#FFFAFA] mb-1">
-                  {friendData.topChampions[0]?.championName || 'N/A'}
-                </div>
-                <div className="text-xs text-[#E0EDFF]/60">
-                  {friendData.topChampions[0]?.games || 0} games • {friendData.topChampions[0]?.winRate.toFixed(0) || 0}% WR
-                </div>
+
+              {/* Friend Champion */}
+              <div className="flex flex-col items-center">
+                {friendData.topChampions[0] ? (
+                  <>
+                    <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#6366F1]/30 mb-2">
+                      <img 
+                        src={`https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/champion/${friendData.topChampions[0].championName}.png`}
+                        alt={friendData.topChampions[0].championName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => e.currentTarget.style.display = 'none'}
+                      />
+                    </div>
+                    <div className="text-sm font-semibold text-[#FFFAFA] mb-1 text-center">
+                      {friendData.topChampions[0].championName}
+                    </div>
+                    <div className="text-xs text-[#E0EDFF]/60 text-center">
+                      {friendData.topChampions[0].games} games
+                    </div>
+                    <div className={`text-xs font-semibold mt-1 ${friendData.topChampions[0].winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
+                      {friendData.topChampions[0].winRate.toFixed(0)}% WR
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-[#E0EDFF]/60">N/A</div>
+                )}
               </div>
             </div>
           </div>
@@ -196,7 +261,7 @@ export function SocialComparison({ currentPlayer }: SocialComparisonProps) {
             </svg>
           </div>
           <p className="text-sm text-[#E0EDFF]/60">
-            Enter a friend's GameName#TAG to compare stats
+            Enter a friend&apos;s GameName#TAG to compare stats
           </p>
         </div>
       )}
