@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Use standalone output for deployment with API routes
-  output: 'standalone',
+  // Empty config for AWS Amplify Hosting with SSR support
 };
 
 export default nextConfig;
