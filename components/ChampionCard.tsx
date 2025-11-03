@@ -5,26 +5,45 @@ interface ChampionCardProps {
   rank: number;
 }
 
+// Latest LoL patch version
+const DDRAGON_VERSION = '14.24.1';
+
 export default function ChampionCard({ champion, rank }: ChampionCardProps) {
   const winRateColor = champion.winRate >= 50 
     ? 'text-green-600 dark:text-green-400' 
     : 'text-red-600 dark:text-red-400';
 
+  // Champion icon URL from Data Dragon
+  const championIconUrl = `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/champion/${champion.championName}.png`;
+
   return (
     <div className="group relative overflow-hidden rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 p-5 transition-all duration-300 hover:bg-white/50 dark:hover:bg-white/10 hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-white/5">
       {/* Rank Badge */}
-      <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-gradient-to-br from-gray-900/80 to-gray-700/80 dark:from-white/10 dark:to-white/5 backdrop-blur-sm flex items-center justify-center">
+      <div className="absolute top-4 left-4 w-8 h-8 rounded-full bg-gradient-to-br from-gray-900/80 to-gray-700/80 dark:from-white/10 dark:to-white/5 backdrop-blur-sm flex items-center justify-center z-10">
         <span className="text-xs font-bold text-white dark:text-gray-200">
           #{rank}
         </span>
       </div>
 
       <div className="flex items-center gap-4 pl-10">
-        {/* Champion Icon Placeholder */}
-        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 dark:from-purple-500/10 dark:to-blue-500/10 border border-white/30 dark:border-white/20 flex items-center justify-center shrink-0">
-          <span className="text-2xl font-bold text-gray-700 dark:text-gray-300">
-            {champion.championName.substring(0, 2).toUpperCase()}
-          </span>
+        {/* Champion Icon */}
+        <div className="relative w-16 h-16 rounded-xl overflow-hidden border-2 border-white/30 dark:border-white/20 shrink-0 shadow-lg">
+          <img 
+            src={championIconUrl}
+            alt={champion.championName}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+            onError={(e) => {
+              // Fallback if image fails to load
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+          {/* Fallback placeholder */}
+          <div className="hidden absolute inset-0 bg-gradient-to-br from-purple-500/20 to-blue-500/20 dark:from-purple-500/10 dark:to-blue-500/10 flex items-center justify-center">
+            <span className="text-2xl font-bold text-gray-700 dark:text-gray-300">
+              {champion.championName.substring(0, 2).toUpperCase()}
+            </span>
+          </div>
         </div>
 
         {/* Champion Info */}

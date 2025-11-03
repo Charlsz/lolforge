@@ -12,14 +12,46 @@ const client = new BedrockRuntimeClient({
 });
 
 export async function generateYearRecapInsights(playerStats: any) {
-  const prompt = `You are a fun League of Legends analyst. Based on this player's year stats, write a short, engaging 3-paragraph recap:
+  const prompt = `You are an expert League of Legends analyst providing deep insights that go BEYOND basic stats.
 
+PLAYER DATA:
+Basic Stats:
 - Games played: ${playerStats.totalGames}
 - Win rate: ${playerStats.winRate}%
-- Top champion: ${playerStats.topChampion} (${playerStats.topChampionWR}% WR)
+- Main champion: ${playerStats.topChampion} with ${playerStats.topChampionStats?.wr || '0'}% WR
 - Average KDA: ${playerStats.kda}
 
-Make it funny, personal, and motivational. Use emojis!`;
+🚀 ADVANCED METRICS (These make us unique!):
+- Clutch Factor: ${playerStats.clutchFactor}% (Comeback win rate when behind)
+- Carry Potential: ${playerStats.carryPotential}% (Games with >60% kill participation)
+- Consistency Score: ${playerStats.consistencyScore}/100 (Performance stability)
+- Peak Month: ${playerStats.peakMonth} (Best performing period)
+- Improvement: ${playerStats.improvement > 0 ? '+' : ''}${playerStats.improvement}% (Late season vs early season)
+
+YOUR JOB:
+Write 3 unique, analytical paragraphs that use these ADVANCED metrics:
+
+PARAGRAPH 1 - DEEP PERFORMANCE ANALYSIS:
+Go beyond win rate. Analyze their clutch factor, consistency, and carry potential.
+Example: "Your 35% clutch factor shows you thrive under pressure, winning comebacks..."
+
+PARAGRAPH 2 - GROWTH TRAJECTORY:
+Use the improvement stat and peak month to tell their story.
+Are they improving? Declining? Plateauing?
+Example: "You peaked in ${playerStats.peakMonth} but showed ${playerStats.improvement > 0 ? 'positive growth' : 'some decline'} late season..."
+
+PARAGRAPH 3 - UNIQUE ACTIONABLE ADVICE:
+Based on their specific advanced metrics, give targeted improvement tips.
+Example: "Your low consistency score (${playerStats.consistencyScore}/100) suggests focusing on..."
+
+TONE: Analytical, specific, data-driven. Reference the advanced metrics explicitly.
+
+CRITICAL RULES:
+- Do NOT write "Here's", "In summary", or any preamble
+- Start directly with the content
+- Use emojis sparingly (max 3-4 total)
+- Reference ADVANCED metrics (clutch factor, consistency, etc.)
+- Make it feel like premium analysis, not generic feedback`;
 
   const payload = {
     anthropic_version: "bedrock-2023-05-31",

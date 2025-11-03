@@ -3,6 +3,8 @@ export interface PlayerAccount {
   puuid: string;
   gameName: string;
   tagLine: string;
+  profileIconId?: number;
+  summonerLevel?: number;
 }
 
 // Match types
@@ -60,6 +62,19 @@ export interface RoleStats {
   winRate: number;
 }
 
+// Advanced metrics - "Beyond OP.GG"
+export interface AdvancedMetrics {
+  clutchFactor: number; // % of comebacks (behind early, won late)
+  carryPotential: number; // % of games with >60% kill participation
+  consistencyScore: number; // 0-100, lower variance = higher score
+  peakPerformanceMonth: string; // Best month by winrate
+  earlyVsLateImprovement: {
+    earlyWinRate: number; // First 50% of games
+    lateWinRate: number; // Last 50% of games
+    improvement: number; // Difference
+  };
+}
+
 export interface PlayerRecap {
   player: PlayerAccount;
   totalGames: number;
@@ -75,4 +90,6 @@ export interface PlayerRecap {
   averageKills: number;
   averageDeaths: number;
   averageAssists: number;
+  advancedMetrics?: AdvancedMetrics; // New!
+  aiInsights?: string | null;
 }

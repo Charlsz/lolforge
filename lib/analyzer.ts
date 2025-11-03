@@ -1,4 +1,4 @@
-import { MatchInfo, ChampionStats, RoleStats, PlayerAccount, PlayerRecap } from './types';
+import { MatchInfo, ChampionStats, RoleStats, PlayerAccount, PlayerRecap, AdvancedMetrics } from './types';
 
 export class MatchAnalyzer {
   private matches: MatchInfo[];
@@ -199,12 +199,130 @@ export class MatchAnalyzer {
     };
   }
 
+  // 🚀 ADVANCED METRICS - "Beyond OP.GG"
+  public getAdvancedMetrics(): AdvancedMetrics {
+    // 1. Clutch Factor: % of games won with high comeback potential
+    let clutchWins = 0;
+    let totalGames = 0;
+
+    // 2. Carry Potential: Games where you had >60% kill participation
+    let carryGames = 0;
+
+    // 3. Consistency Score: Based on KDA variance
+    const kdaValues: number[] = [];
+
+    this.matches.forEach(match => {
+      const playerData = this.getPlayerData(match);
+      if (!playerData) return;
+
+      totalGames++;
+
+      // Calculate kill participation
+      const teamKills = match.participants
+        .filter(p => p.win === playerData.win)
+        .reduce((sum, p) => sum + p.kills, 0);
+      
+      const killParticipation = teamKills > 0 
+        ? ((playerData.kills + playerData.assists) / teamKills) * 100 
+        : 0;
+
+      // Carry potential: >60% KP
+      if (killParticipation >= 60 && playerData.win) {
+        carryGames++;
+      }
+
+      // Clutch factor: Won despite being behind
+      // Heuristic: Low gold but won = comeback
+      const avgGold = match.participants.reduce((sum, p) => sum + p.goldEarned, 0) / 10;
+      if (playerData.win && playerData.goldEarned < avgGold * 0.9) {
+        clutchWins++;
+      }
+
+      // KDA for consistency
+      const gameKDA = playerData.deaths > 0
+        ? (playerData.kills + playerData.assists) / playerData.deaths
+        : playerData.kills + playerData.assists;
+      kdaValues.push(gameKDA);
+    });
+
+    // Calculate consistency score (inverse of coefficient of variation)
+    const avgKDA = kdaValues.reduce((a, b) => a + b, 0) / kdaValues.length;
+    const variance = kdaValues.reduce((sum, kda) => sum + Math.pow(kda - avgKDA, 2), 0) / kdaValues.length;
+    const stdDev = Math.sqrt(variance);
+    const coefficientOfVariation = avgKDA > 0 ? stdDev / avgKDA : 1;
+    const consistencyScore = Math.max(0, Math.min(100, 100 - (coefficientOfVariation * 50)));
+
+    // 4. Peak Performance Month
+    const monthlyStats = new Map<string, { wins: number; games: number }>();
+    
+    this.matches.forEach(match => {
+      const playerData = this.getPlayerData(match);
+      if (!playerData) return;
+
+      const date = new Date(match.gameCreation);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!monthlyStats.has(monthKey)) {
+        monthlyStats.set(monthKey, { wins: 0, games: 0 });
+      }
+
+      const stats = monthlyStats.get(monthKey)!;
+      stats.games++;
+      if (playerData.win) stats.wins++;
+    });
+
+    let peakPerformanceMonth = 'Unknown';
+    let bestMonthWR = 0;
+
+    monthlyStats.forEach((stats, month) => {
+      const wr = (stats.wins / stats.games) * 100;
+      if (wr > bestMonthWR && stats.games >= 5) { // Min 5 games
+        bestMonthWR = wr;
+        peakPerformanceMonth = month;
+      }
+    });
+
+    // 5. Early vs Late improvement
+    const midpoint = Math.floor(this.matches.length / 2);
+    const sortedMatches = [...this.matches].sort((a, b) => a.gameCreation - b.gameCreation);
+    
+    const earlyMatches = sortedMatches.slice(0, midpoint);
+    const lateMatches = sortedMatches.slice(midpoint);
+
+    const earlyWins = earlyMatches.filter(m => {
+      const p = this.getPlayerData(m);
+      return p?.win;
+    }).length;
+
+    const lateWins = lateMatches.filter(m => {
+      const p = this.getPlayerData(m);
+      return p?.win;
+    }).length;
+
+    const earlyWinRate = earlyMatches.length > 0 ? (earlyWins / earlyMatches.length) * 100 : 0;
+    const lateWinRate = lateMatches.length > 0 ? (lateWins / lateMatches.length) * 100 : 0;
+    const improvement = lateWinRate - earlyWinRate;
+
+    return {
+      clutchFactor: totalGames > 0 ? (clutchWins / totalGames) * 100 : 0,
+      carryPotential: totalGames > 0 ? (carryGames / totalGames) * 100 : 0,
+      consistencyScore,
+      peakPerformanceMonth,
+      earlyVsLateImprovement: {
+        earlyWinRate,
+        lateWinRate,
+        improvement,
+      },
+    };
+  }
+
   // Generate complete recap
   public generateRecap(player: PlayerAccount): PlayerRecap {
     const overallStats = this.getOverallStats();
     const topChampions = this.getTopChampions(5);
     const roleStats = this.getRoleStats();
     const streaks = this.getStreaks();
+    const advancedMetrics = this.getAdvancedMetrics();
 
     return {
       player,
@@ -212,6 +330,7 @@ export class MatchAnalyzer {
       topChampions,
       roleStats,
       ...streaks,
+      advancedMetrics,
     };
   }
 }
