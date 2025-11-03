@@ -19,13 +19,15 @@ export default function Home() {
       const response = await fetch(`/api/player?gameName=${encodeURIComponent(gameName)}&tagLine=${encodeURIComponent(tagLine)}`);
       
       if (!response.ok) {
-        throw new Error('Player not found');
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Player not found');
       }
 
       const data = await response.json();
       router.push(`/recap/${data.puuid}?gameName=${encodeURIComponent(gameName)}&tagLine=${encodeURIComponent(tagLine)}`);
     } catch (err) {
-      setError('Player not found. Please check your Game Name and Tag Line.');
+      const errorMessage = err instanceof Error ? err.message : 'Player not found. Please check your Game Name and Tag Line.';
+      setError(errorMessage);
       setIsLoading(false);
     }
   };
