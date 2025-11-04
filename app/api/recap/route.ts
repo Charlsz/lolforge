@@ -310,6 +310,7 @@ export async function GET(request: NextRequest) {
       rankedInfo,
       championMasteries,
       liveGame,
+      matches, // Include full match history for display
       aiInsights: null, // Don't generate automatically to save AWS costs
     });
   } catch (error) {

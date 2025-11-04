@@ -45,28 +45,30 @@ export function FunAchievements({ achievements }: FunAchievementsProps) {
         <p className="text-sm text-[#E0EDFF]/60">Your quirky stats and milestones</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-3">
         {achievements.map((achievement) => (
           <div
             key={achievement.id}
-            className={`relative bg-gradient-to-br ${getRarityColor(achievement.rarity)} rounded-lg p-4 border-2 transition-all hover:scale-105 hover:shadow-lg`}
+            className={`bg-gradient-to-br ${getRarityColor(achievement.rarity)} rounded-lg p-4 border-2 transition-all hover:scale-[1.02]`}
           >
             {/* Rarity Badge */}
             {achievement.rarity && (
-              <div className="absolute top-2 right-2 text-xs font-semibold text-[#FFFAFA]/80">
-                {getRarityLabel(achievement.rarity)}
+              <div className="flex justify-end mb-2">
+                <span className="text-xs font-semibold text-[#FFFAFA]/80 px-2 py-1 rounded bg-black/20">
+                  {getRarityLabel(achievement.rarity)}
+                </span>
               </div>
             )}
 
             {/* Content */}
-            <div className="flex items-start gap-4">
+            <div className="flex items-center gap-3">
               {/* Emoji Icon */}
-              <div className="text-4xl flex-shrink-0">
+              <div className="text-5xl flex-shrink-0">
                 {achievement.emoji}
               </div>
 
               {/* Text */}
-              <div className="flex-1 pt-1">
+              <div className="flex-1">
                 <h3 className="text-lg font-bold text-[#FFFAFA] mb-1">
                   {achievement.title}
                 </h3>
@@ -74,12 +76,12 @@ export function FunAchievements({ achievements }: FunAchievementsProps) {
                   {achievement.description}
                 </p>
                 {typeof achievement.value === 'number' && (
-                  <div className="text-2xl font-bold text-[#6366F1]">
+                  <div className="text-3xl font-black text-[#6366F1]">
                     {achievement.value.toLocaleString()}
                   </div>
                 )}
                 {typeof achievement.value === 'string' && (
-                  <div className="text-sm font-semibold text-[#6366F1]">
+                  <div className="text-base font-bold text-[#6366F1]">
                     {achievement.value}
                   </div>
                 )}

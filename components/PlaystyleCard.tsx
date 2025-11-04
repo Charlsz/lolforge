@@ -62,64 +62,79 @@ export function PlaystyleCard({ playstyle }: PlaystyleCardProps) {
     return trait.charAt(0).toUpperCase() + trait.slice(1);
   };
 
+  // Convert percentage to descriptive text
+  const getTraitLevel = (value: number): { text: string; color: string } => {
+    if (value >= 80) return { text: 'Exceptional', color: 'text-green-400' };
+    if (value >= 65) return { text: 'Very High', color: 'text-emerald-400' };
+    if (value >= 50) return { text: 'High', color: 'text-blue-400' };
+    if (value >= 35) return { text: 'Moderate', color: 'text-yellow-400' };
+    if (value >= 20) return { text: 'Low', color: 'text-orange-400' };
+    return { text: 'Very Low', color: 'text-red-400' };
+  };
+
   return (
-    <div className="bg-[#1C1E22] rounded-lg p-6 border border-[#E0EDFF]/10">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-[#FFFAFA] mb-1">Your Playstyle</h2>
-        <p className="text-sm text-[#E0EDFF]/60">AI-powered personality analysis</p>
+    <div className="bg-[#1C1E22] rounded-lg p-5 border border-[#E0EDFF]/10">
+      <div className="mb-4">
+        <h2 className="text-lg font-bold text-[#FFFAFA] mb-1">Your Playstyle</h2>
+        <p className="text-xs text-[#E0EDFF]/60">AI-powered analysis</p>
       </div>
 
-      {/* Primary Playstyle */}
-      <div className={`bg-gradient-to-br ${primaryInfo.bgColor} rounded-lg p-6 border-2 ${primaryInfo.borderColor} mb-4`}>
-        <div className="flex items-center gap-4 mb-4">
-          <div className="text-5xl">{primaryInfo.icon}</div>
-          <div>
-            <div className="text-xs uppercase tracking-wide text-[#E0EDFF]/60 mb-1">Primary Style</div>
-            <h3 className="text-2xl font-bold text-[#FFFAFA]">
-              {playstyle.primary.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-            </h3>
-          </div>
-        </div>
-        <p className="text-[#FFFAFA]/90 text-base leading-relaxed mb-4">
-          {playstyle.description}
-        </p>
-        <p className="text-xs text-[#E0EDFF]/60 italic">
-          {playstyle.reasoning}
-        </p>
-      </div>
-
-      {/* Secondary Playstyle */}
-      {secondaryInfo && playstyle.secondary && (
-        <div className={`bg-gradient-to-br ${secondaryInfo.bgColor} rounded-lg p-4 border ${secondaryInfo.borderColor} mb-4`}>
+      {/* Primary & Secondary Combined */}
+      <div className="space-y-2 mb-4">
+        {/* Primary Playstyle */}
+        <div className={`bg-gradient-to-br ${primaryInfo.bgColor} rounded-lg p-3 border ${primaryInfo.borderColor}`}>
           <div className="flex items-center gap-3">
-            <div className="text-3xl">{secondaryInfo.icon}</div>
-            <div>
-              <div className="text-xs uppercase tracking-wide text-[#E0EDFF]/60">Secondary Trait</div>
-              <h4 className="text-lg font-bold text-[#FFFAFA]">
-                {playstyle.secondary.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-              </h4>
+            <div className="text-3xl">{primaryInfo.icon}</div>
+            <div className="flex-1">
+              <div className="text-[10px] uppercase tracking-wide text-[#E0EDFF]/60 mb-0.5">Primary Style</div>
+              <h3 className="text-base font-bold text-[#FFFAFA]">
+                {playstyle.primary.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+              </h3>
             </div>
           </div>
         </div>
-      )}
 
-      {/* Trait Breakdown */}
-      <div className="space-y-3">
-        <div className="text-sm font-semibold text-[#FFFAFA] mb-2">Trait Breakdown</div>
-        {Object.entries(playstyle.traits).map(([trait, value]) => (
-          <div key={trait}>
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-[#E0EDFF]/80">{formatTraitName(trait)}</span>
-              <span className="text-sm font-semibold text-[#FFFAFA]">{Math.round(value)}%</span>
-            </div>
-            <div className="w-full bg-[#23262A] rounded-full h-2 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#6366F1] to-[#8b5cf6] rounded-full transition-all duration-500"
-                style={{ width: `${value}%` }}
-              />
+        {/* Secondary Playstyle */}
+        {secondaryInfo && playstyle.secondary && (
+          <div className={`bg-gradient-to-br ${secondaryInfo.bgColor} rounded-lg p-3 border ${secondaryInfo.borderColor}`}>
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">{secondaryInfo.icon}</div>
+              <div className="flex-1">
+                <div className="text-[10px] uppercase tracking-wide text-[#E0EDFF]/60">Secondary</div>
+                <h4 className="text-sm font-bold text-[#FFFAFA]">
+                  {playstyle.secondary.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                </h4>
+              </div>
             </div>
           </div>
-        ))}
+        )}
+      </div>
+
+      {/* Description - Compact */}
+      <p className="text-xs text-[#FFFAFA]/80 leading-relaxed mb-4 line-clamp-3">
+        {playstyle.description}
+      </p>
+
+      {/* Trait Breakdown - More Compact */}
+      <div className="bg-[#23262A] rounded-lg p-3 space-y-2">
+        <div className="text-xs font-semibold text-[#FFFAFA] mb-2">Your Attributes</div>
+        {Object.entries(playstyle.traits).map(([trait, value]) => {
+          const level = getTraitLevel(value);
+          return (
+            <div key={trait} className="flex items-center justify-between py-1.5 border-b border-[#E0EDFF]/5 last:border-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#E0EDFF]/80 min-w-[85px]">{formatTraitName(trait)}</span>
+                <div className="w-16 bg-[#1C1E22] rounded-full h-1 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#6366F1] to-[#8b5cf6] rounded-full transition-all duration-500"
+                    style={{ width: `${value}%` }}
+                  />
+                </div>
+              </div>
+              <span className={`text-xs font-semibold ${level.color}`}>{level.text}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

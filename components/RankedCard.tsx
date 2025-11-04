@@ -98,83 +98,65 @@ export function RankedCard({ rankedInfo, isLoading = false }: RankedCardProps) {
   };
 
   return (
-    <div className="bg-[#1C1E22] rounded-lg p-6 border border-[#E0EDFF]/10">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-[#FFFAFA] mb-1">Ranked Status</h2>
-        <p className="text-sm text-[#E0EDFF]/60">Your competitive standing</p>
-      </div>
-
-      <div className="space-y-4">
-        {rankedInfo.map((rank, index) => (
-          <div
-            key={index}
-            className={`relative bg-gradient-to-br ${getTierColor(rank.tier)} rounded-lg p-5 overflow-hidden`}
-          >
-            {/* Background decoration */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl"></div>
+    <div className="space-y-4">
+      {rankedInfo.map((rank, index) => (
+        <div
+          key={index}
+          className={`bg-gradient-to-br ${getTierColor(rank.tier)} rounded-lg p-5 overflow-hidden border-2 border-white/20`}
+        >
+          {/* Queue Type & Badges */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-bold text-white uppercase tracking-wide">
+              {getQueueName(rank.queueType)}
             </div>
+            <div className="flex gap-2">
+              {rank.hotStreak && (
+                <span className="px-2 py-1 rounded bg-orange-500/30 text-white text-xs font-bold">
+                  🔥 Hot Streak
+                </span>
+              )}
+              {rank.veteran && (
+                <span className="px-2 py-1 rounded bg-purple-500/30 text-white text-xs font-bold">
+                  ⚔️ Veteran
+                </span>
+              )}
+            </div>
+          </div>
 
-            <div className="relative z-10">
-              {/* Queue Type & Badges */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-xs font-semibold text-white/80 uppercase tracking-wide">
-                  {getQueueName(rank.queueType)}
-                </div>
-                <div className="flex gap-2">
-                  {rank.hotStreak && (
-                    <span className="px-2 py-1 rounded bg-orange-500/30 text-white text-xs font-bold">
-                      🔥 Hot Streak
-                    </span>
-                  )}
-                  {rank.veteran && (
-                    <span className="px-2 py-1 rounded bg-purple-500/30 text-white text-xs font-bold">
-                      ⚔️ Veteran
-                    </span>
-                  )}
-                </div>
+          {/* Rank Display */}
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-5xl">
+              {getTierEmoji(rank.tier)}
+            </div>
+            <div>
+              <div className="text-3xl font-black text-white mb-1">
+                {rank.tier} {rank.rank}
               </div>
-
-              {/* Rank Display */}
-              <div className="flex items-center gap-4 mb-4">
-                <div className="text-5xl">
-                  {getTierEmoji(rank.tier)}
-                </div>
-                <div>
-                  <div className="text-3xl font-black text-white mb-1">
-                    {rank.tier} {rank.rank}
-                  </div>
-                  <div className="text-xl font-bold text-white/90">
-                    {rank.leaguePoints} LP
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-black/20 rounded-lg p-3">
-                  <div className="text-xs text-white/70 mb-1">Win Rate</div>
-                  <div className={`text-lg font-bold ${rank.winRate >= 50 ? 'text-green-300' : 'text-red-300'}`}>
-                    {rank.winRate.toFixed(1)}%
-                  </div>
-                </div>
-                <div className="bg-black/20 rounded-lg p-3">
-                  <div className="text-xs text-white/70 mb-1">Wins</div>
-                  <div className="text-lg font-bold text-white">
-                    {rank.wins}W
-                  </div>
-                </div>
-                <div className="bg-black/20 rounded-lg p-3">
-                  <div className="text-xs text-white/70 mb-1">Losses</div>
-                  <div className="text-lg font-bold text-white">
-                    {rank.losses}L
-                  </div>
-                </div>
+              <div className="text-xl font-bold text-white/90">
+                {rank.leaguePoints} LP
               </div>
             </div>
           </div>
-        ))}
-      </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-xs text-white/70 mb-1">Games</div>
+              <div className="text-lg font-bold text-white">{rank.wins + rank.losses}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs text-white/70 mb-1">Win Rate</div>
+              <div className={`text-lg font-bold ${((rank.wins / (rank.wins + rank.losses)) * 100) >= 50 ? 'text-green-300' : 'text-red-300'}`}>
+                {((rank.wins / (rank.wins + rank.losses)) * 100).toFixed(0)}%
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-xs text-white/70 mb-1">Record</div>
+              <div className="text-lg font-bold text-white">{rank.wins}W {rank.losses}L</div>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

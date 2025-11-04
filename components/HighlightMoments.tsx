@@ -86,58 +86,43 @@ export function HighlightMoments({ highlights }: HighlightMomentsProps) {
         <p className="text-sm text-[#E0EDFF]/60">Your most memorable games</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-3">
         {highlights.slice(0, 4).map((highlight, index) => (
           <div
             key={index}
-            className={`bg-gradient-to-br ${getColorForType(highlight.type)} rounded-lg p-5 border hover:scale-[1.02] transition-transform`}
+            className={`bg-gradient-to-br ${getColorForType(highlight.type)} rounded-lg p-4 border-2 hover:scale-[1.02] transition-transform`}
           >
-            <div className="flex items-start gap-4">
+            <div className="flex items-center gap-3 mb-3">
               {/* Icon */}
-              <div className={`w-12 h-12 rounded-xl ${getIconColorForType(highlight.type)} flex items-center justify-center flex-shrink-0`}>
+              <div className={`w-10 h-10 rounded-lg ${getIconColorForType(highlight.type)} flex items-center justify-center flex-shrink-0`}>
                 {getIconForType(highlight.type)}
               </div>
+              
+              {/* Title */}
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-[#FFFAFA]">{highlight.title}</h3>
+                <p className="text-xs text-[#E0EDFF]/70">{highlight.description}</p>
+              </div>
+            </div>
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-[#FFFAFA] mb-1">{highlight.title}</h3>
-                <p className="text-xs text-[#E0EDFF]/70 mb-3">{highlight.description}</p>
-
-                {/* Stats */}
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={`https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/champion/${highlight.stats.championName}.png`}
-                      alt={highlight.stats.championName}
-                      className="w-8 h-8 rounded"
-                      onError={(e) => e.currentTarget.style.display = 'none'}
-                    />
-                    <div>
-                      <div className="text-xs font-semibold text-[#FFFAFA]">
-                        {highlight.stats.kills}/{highlight.stats.deaths}/{highlight.stats.assists}
-                      </div>
-                      <div className="text-xs text-[#E0EDFF]/60">
-                        {highlight.stats.kda.toFixed(2)} KDA
-                      </div>
-                    </div>
-                  </div>
+            {/* Stats Compact */}
+            <div className="flex items-center gap-4">
+              <img
+                src={`https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/champion/${highlight.stats.championName}.png`}
+                alt={highlight.stats.championName}
+                className="w-10 h-10 rounded"
+                onError={(e) => e.currentTarget.style.display = 'none'}
+              />
+              <div className="flex-1">
+                <div className="text-sm font-bold text-[#FFFAFA]">
+                  {highlight.stats.kills}/{highlight.stats.deaths}/{highlight.stats.assists}
                 </div>
-
-                {/* Additional info */}
-                <div className="flex items-center gap-3 text-xs text-[#E0EDFF]/60">
-                  <div className="flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {Math.floor(highlight.stats.gameDuration / 60)}:{String(highlight.stats.gameDuration % 60).padStart(2, '0')}
-                  </div>
-                  <div className={`px-2 py-0.5 rounded-full ${highlight.stats.win ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                    {highlight.stats.win ? 'Victory' : 'Defeat'}
-                  </div>
-                  {highlight.stats.killParticipation && (
-                    <div>KP: {highlight.stats.killParticipation.toFixed(0)}%</div>
-                  )}
+                <div className="text-xs text-[#E0EDFF]/60">
+                  {highlight.stats.kda.toFixed(2)} KDA • {Math.floor(highlight.stats.gameDuration / 60)}:{String(highlight.stats.gameDuration % 60).padStart(2, '0')}
                 </div>
+              </div>
+              <div className={`px-3 py-1 rounded-full text-xs font-bold ${highlight.stats.win ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                {highlight.stats.win ? 'Victory' : 'Defeat'}
               </div>
             </div>
           </div>

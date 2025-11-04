@@ -67,7 +67,10 @@ export interface AdvancedMetrics {
   clutchFactor: number; // % of comebacks (behind early, won late)
   carryPotential: number; // % of games with >60% kill participation
   consistencyScore: number; // 0-100, lower variance = higher score
-  peakPerformanceMonth: string; // Best month by winrate
+  peakPerformanceMonth: {
+    month: string;
+    winRate: number;
+  }; // Best month by winrate
   earlyVsLateImprovement: {
     earlyWinRate: number; // First 50% of games
     lateWinRate: number; // Last 50% of games
@@ -202,5 +205,6 @@ export interface PlayerRecap {
   championMasteries?: ChampionMastery[]; // NEW!
   liveGame?: LiveGameInfo | null; // NEW!
   topChallenges?: ChallengeInfo[]; // NEW!
+  matches?: MatchInfo[]; // NEW! Full match history
   aiInsights?: string | null;
 }

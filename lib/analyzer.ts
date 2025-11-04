@@ -271,14 +271,14 @@ export class MatchAnalyzer {
       if (playerData.win) stats.wins++;
     });
 
-    let peakPerformanceMonth = 'Unknown';
+    let peakPerformanceMonth = { month: 'Unknown', winRate: 0 };
     let bestMonthWR = 0;
 
     monthlyStats.forEach((stats, month) => {
       const wr = (stats.wins / stats.games) * 100;
       if (wr > bestMonthWR && stats.games >= 5) { // Min 5 games
         bestMonthWR = wr;
-        peakPerformanceMonth = month;
+        peakPerformanceMonth = { month, winRate: wr };
       }
     });
 
