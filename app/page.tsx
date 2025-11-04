@@ -44,15 +44,99 @@
 
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+
+interface SearchResult {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+  platform: string;
+  platformDisplay: string;
+  profileIconId: number;
+}
 
 export default function Home() {
   const [searchValue, setSearchValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Auto-search functionality
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    const trimmed = searchValue.trim();
+    
+    // Show dropdown as soon as user starts typing
+    if (trimmed.length >= 1) {
+      // If has # and both parts have content, search
+      if (trimmed.includes('#')) {
+        const [gameName, tagLine] = trimmed.split('#');
+        if (gameName && tagLine && tagLine.length >= 1) {
+          setIsSearching(true);
+          searchTimeoutRef.current = setTimeout(async () => {
+            try {
+              const response = await fetch(`/api/search?query=${encodeURIComponent(trimmed)}`);
+              if (response.ok) {
+                const data = await response.json();
+                setSearchResults(data.results || []);
+                setShowDropdown(true); // Always show dropdown when searching
+              }
+            } catch (err) {
+              console.error('Search error:', err);
+            } finally {
+              setIsSearching(false);
+            }
+          }, 300); // Reduced delay to 300ms for faster response
+        } else {
+          // Show dropdown with guide message
+          setShowDropdown(true);
+          setSearchResults([]);
+        }
+      } else {
+        // Show dropdown with guide message (no # yet)
+        setShowDropdown(true);
+        setSearchResults([]);
+      }
+    } else {
+      setSearchResults([]);
+      setShowDropdown(false);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchValue]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectResult = (result: SearchResult) => {
+    setSearchValue(`${result.gameName}#${result.tagLine}`);
+    setShowDropdown(false);
+    setIsLoading(true);
+    router.push(`/recap/${result.puuid}?gameName=${encodeURIComponent(result.gameName)}&tagLine=${encodeURIComponent(result.tagLine)}`);
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -143,33 +227,102 @@ export default function Home() {
           </a>
 
           {/* Search form - Modificar: max-w-md para ancho máximo */}
-          <form onSubmit={handleSubmit} className="w-full max-w-md">
-            {/* Barra de búsqueda - Modificar: rounded-full para forma, bg-white para fondo, px-6 py-4 para padding */}
-            <div className="flex items-center gap-3 rounded-full bg-white px-6 py-4 shadow-xl">
-              {/* Ícono de búsqueda - Modificar: h-6 w-6 para tamaño, text-gray-400 para color */}
-              <svg
-                aria-hidden
-                className="h-6 w-6 flex-shrink-0 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
-              {/* Input - Modificar: text-lg para tamaño de texto, placeholder para texto de ejemplo */}
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(event) => setSearchValue(event.target.value)}
-                placeholder="Search Summoner#TAG"
-                disabled={isLoading}
-                className="flex-1 bg-transparent text-lg text-gray-700 placeholder:text-gray-400 focus:outline-none"
-              />
+          <form onSubmit={handleSubmit} className="w-full max-w-md relative">
+            {/* Contenedor de búsqueda con dropdown */}
+            <div ref={dropdownRef} className="relative">
+              {/* Barra de búsqueda - Modificar: rounded-full para forma, bg-white para fondo, px-6 py-4 para padding */}
+              <div className="flex items-center gap-3 rounded-full bg-white px-6 py-4 shadow-xl">
+                {/* Ícono de búsqueda - Modificar: h-6 w-6 para tamaño, text-gray-400 para color */}
+                <svg
+                  aria-hidden
+                  className="h-6 w-6 flex-shrink-0 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+                {/* Input - Modificar: text-lg para tamaño de texto, placeholder para texto de ejemplo */}
+                <input
+                  type="text"
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                  onFocus={() => {
+                    if (searchResults.length > 0) {
+                      setShowDropdown(true);
+                    }
+                  }}
+                  placeholder="Search Summoner#TAG"
+                  disabled={isLoading}
+                  className="flex-1 bg-transparent text-lg text-gray-700 placeholder:text-gray-400 focus:outline-none"
+                />
+                {isSearching && (
+                  <div className="animate-spin h-5 w-5 border-2 border-gray-300 border-t-[#40E0D0] rounded-full"></div>
+                )}
+              </div>
+
+              {/* Dropdown de resultados */}
+              {showDropdown && (
+                <div className="absolute top-full mt-2 w-full min-w-[500px] bg-[#1A1D21] rounded-2xl shadow-2xl overflow-hidden z-50 border border-[#E0EDFF]/10">
+                  {searchResults.length > 0 ? (
+                    <div className="py-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+                      {searchResults.slice(0, 8).map((result, index) => (
+                        <button
+                          key={`${result.puuid}-${index}`}
+                          type="button"
+                          onClick={() => handleSelectResult(result)}
+                          className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#23262A] transition-colors text-left group"
+                        >
+                          <div className="flex items-center gap-3">
+                            {/* Profile Icon */}
+                            <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-[#E0EDFF]/20 group-hover:border-[#40E0D0] transition-colors flex-shrink-0">
+                              <Image
+                                src={`https://ddragon.leagueoflegends.com/cdn/14.23.1/img/profileicon/${result.profileIconId}.png`}
+                                alt={result.gameName}
+                                fill
+                                className="object-cover"
+                                unoptimized
+                              />
+                            </div>
+                            
+                            {/* Name and Tag */}
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-base font-bold text-[#FFFAFA] group-hover:text-[#40E0D0] transition-colors truncate">
+                                {result.gameName}
+                              </span>
+                              <span className="text-sm text-[#E0EDFF]/60">
+                                #{result.tagLine}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Server Badge */}
+                          <span className="px-3 py-1 rounded-full bg-[#40E0D0]/20 text-[#40E0D0] text-xs font-bold border border-[#40E0D0]/40 flex-shrink-0">
+                            {result.platformDisplay}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-6 py-4">
+                      <div className="flex items-center gap-3 text-[#E0EDFF]/60">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-sm">
+                          {isSearching ? 'Searching...' : 'Enter full format: GameName#TAG'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+            
             {/* Mensajes de error/carga - Modificar: mt-3 para espacio superior, text-sm para tamaño */}
             {error && (
               <p className="mt-3 text-sm font-medium text-red-100 drop-shadow">{error}</p>

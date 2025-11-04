@@ -5,6 +5,8 @@ export interface PlayerAccount {
   tagLine: string;
   profileIconId?: number;
   summonerLevel?: number;
+  platform?: string; // Real game server (la1, euw1, eune1, na1, kr, etc.)
+  platformDisplay?: string; // Display name (NA, EUW, EUNE, LAN, etc.)
 }
 
 // Match types

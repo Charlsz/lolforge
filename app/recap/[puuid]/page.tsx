@@ -278,6 +278,13 @@ export default function RecapPage() {
                   <span className="text-[#E0EDFF]/60">#{recap.player.tagLine}</span>
                 </h1>
                 
+                {/* Server Badge - Shows actual game server (NA, EUW, EUNE, LAN, etc.) */}
+                {recap.player.platformDisplay && (
+                  <span className="px-3 py-1 rounded-full bg-[#6366F1]/20 text-[#6366F1] text-xs font-bold border border-[#6366F1]/30">
+                    {recap.player.platformDisplay}
+                  </span>
+                )}
+                
                 {/* Ranked Badges - Both Queues */}
                 {recap.rankedInfo && recap.rankedInfo.length > 0 && (
                   <div className="flex items-center gap-2">

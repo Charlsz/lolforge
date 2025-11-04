@@ -6,6 +6,66 @@ import { generateYearRecapInsights } from '@/lib/ai-generator';
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 const REGION = 'americas';
 
+// Routing regions para búsqueda
+const ROUTING_REGIONS = ['americas', 'europe', 'asia', 'sea'];
+
+// Función auxiliar para buscar jugador en todas las regiones
+async function findPlayerInAllRegions(gameName: string, tagLine: string): Promise<{ puuid: string; gameName: string; tagLine: string; region: string; regionDisplay: string } | null> {
+  const regionDisplayNames: { [key: string]: string } = {
+    'americas': 'Americas',
+    'europe': 'Europe', 
+    'asia': 'Asia',
+    'sea': 'Southeast Asia',
+  };
+
+  // Intentar primero en Americas (más común)
+  const priorityOrder = ['americas', 'europe', 'asia', 'sea'];
+
+  for (const region of priorityOrder) {
+    try {
+      console.log(`  📡 Searching in ${region}...`);
+      
+      const accountResponse = await fetch(
+        `https://${region}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
+        {
+          headers: {
+            'X-Riot-Token': RIOT_API_KEY!,
+          },
+        }
+      );
+
+      if (accountResponse.ok) {
+        const accountData = await accountResponse.json();
+        console.log(`  ✅ Account found in ${regionDisplayNames[region]} routing`);
+        
+        // IMPORTANTE: El routing region puede ser diferente del servidor donde juega
+        // Vamos a detectar el servidor real desde las partidas
+        return {
+          puuid: accountData.puuid,
+          gameName: accountData.gameName,
+          tagLine: accountData.tagLine,
+          region: region, // Routing region donde está la cuenta
+          regionDisplay: regionDisplayNames[region],
+        };
+      }
+      
+      // Si hay error 403, la API key es inválida
+      if (accountResponse.status === 403) {
+        throw new Error('API key invalid or expired');
+      }
+    } catch (err) {
+      // Si es error de API key, propagar el error
+      if (err instanceof Error && err.message.includes('API key')) {
+        throw err;
+      }
+      console.log(`  ⚠️  Not found in ${region}`);
+      // Continuar con la siguiente región
+    }
+  }
+  
+  return null; // No encontrado en ninguna región
+}
+
 // Helper function to determine platform region from match region
 function getPlatformRegion(matchId: string): string {
   if (matchId.startsWith('NA1_')) return 'na1';
@@ -24,15 +84,40 @@ function getPlatformRegion(matchId: string): string {
   if (matchId.startsWith('TH2_')) return 'th2';
   if (matchId.startsWith('TW2_')) return 'tw2';
   if (matchId.startsWith('VN2_')) return 'vn2';
+  if (matchId.startsWith('ME1_')) return 'me1'; // Middle East
   return 'na1'; // default
 }
 
+// Helper function to get display name for platform
+function getPlatformDisplayName(platform: string): string {
+  const platformNames: Record<string, string> = {
+    'na1': 'NA',
+    'br1': 'BR',
+    'la1': 'LAN',
+    'la2': 'LAS',
+    'euw1': 'EUW',
+    'eun1': 'EUNE',
+    'tr1': 'TR',
+    'ru': 'RU',
+    'jp1': 'JP',
+    'kr': 'KR',
+    'oc1': 'OCE',
+    'ph2': 'PH',
+    'sg2': 'SG',
+    'th2': 'TH',
+    'tw2': 'TW',
+    'vn2': 'VN',
+    'me1': 'ME',
+  };
+  return platformNames[platform] || platform.toUpperCase();
+}
+
 // Helper function to fetch match with retry logic
-async function fetchMatchWithRetry(matchId: string, retries = 2): Promise<any | null> {
+async function fetchMatchWithRetry(matchId: string, region: string, retries = 2): Promise<any | null> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const response = await fetch(
-        `https://${REGION}.api.riotgames.com/lol/match/v5/matches/${matchId}`,
+        `https://${region}.api.riotgames.com/lol/match/v5/matches/${matchId}`,
         {
           headers: {
             'X-Riot-Token': RIOT_API_KEY!,
@@ -80,32 +165,49 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Step 1: Get player account info
-    const accountResponse = await fetch(
-      `https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${gameName}/${tagLine}`,
-      {
-        headers: {
-          'X-Riot-Token': RIOT_API_KEY!,
-        },
-      }
-    );
-
-    if (!accountResponse.ok) {
+    // Step 1: Get player account info - buscar en todas las regiones
+    console.log(`🔍 Searching for player: ${gameName}#${tagLine} across all regions...`);
+    
+    const accountData = await findPlayerInAllRegions(gameName, tagLine);
+    
+    if (!accountData) {
       return NextResponse.json(
-        { error: 'Player not found' },
+        { error: 'Player not found in any region. Please check your Game Name and Tag Line.' },
         { status: 404 }
       );
     }
-
-    const accountData = await accountResponse.json();
+    
+    // Usar la región donde se encontró el jugador
+    const routingRegion = accountData.region;
+    console.log(`✅ Player found in region: ${accountData.regionDisplay}`);
     
     // Step 1.5: Get summoner info for profile icon
     let profileIconId = 29; // Default icon
     let summonerLevel = 0;
     
+    // Detect platform from first match or use default
+    let detectedPlatform = 'la1'; // Will be updated based on matches
+    
     try {
+      // Try to get a match ID first to detect platform
+      const quickMatchResponse = await fetch(
+        `https://${routingRegion}.api.riotgames.com/lol/match/v5/matches/by-puuid/${accountData.puuid}/ids?start=0&count=1`,
+        {
+          headers: {
+            'X-Riot-Token': RIOT_API_KEY!,
+          },
+        }
+      );
+      
+      if (quickMatchResponse.ok) {
+        const matchIds = await quickMatchResponse.json();
+        if (matchIds.length > 0) {
+          detectedPlatform = getPlatformRegion(matchIds[0]);
+        }
+      }
+
       const summonerResponse = await fetch(
-        `https://la1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${accountData.puuid}`,
+        `https://${detectedPlatform}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${accountData.puuid}`,
         {
           headers: {
             'X-Riot-Token': RIOT_API_KEY!,
@@ -128,27 +230,54 @@ export async function GET(request: NextRequest) {
       tagLine: accountData.tagLine,
       profileIconId,
       summonerLevel,
+      platform: detectedPlatform, // Real game server (la1, euw1, eune1, etc.)
+      platformDisplay: getPlatformDisplayName(detectedPlatform), // NA, EUW, EUNE, LAN, etc.
     };
 
-    // Step 2: Get match IDs with smart filtering strategy
-    console.log(`📊 Fetching matches for ${player.gameName}#${player.tagLine}...`);
+    // Step 2: Get match IDs - buscar en TODAS las regiones porque el jugador puede jugar en diferentes servidores
+    console.log(`📊 Fetching matches for ${player.gameName}#${player.tagLine} across all regions...`);
     
-    // Strategy: Get more match IDs initially so we can filter intelligently
-    const matchesResponse = await fetch(
-      `https://${REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${player.puuid}/ids?start=0&count=100`,
-      {
-        headers: {
-          'X-Riot-Token': RIOT_API_KEY!,
-        },
+    let allMatchIds: string[] = [];
+    let actualPlayRegion = routingRegion; // Región donde tiene más partidas
+    
+    // Intentar obtener partidas de todas las regiones
+    for (const region of ROUTING_REGIONS) {
+      try {
+        const matchesResponse = await fetch(
+          `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${player.puuid}/ids?start=0&count=100`,
+          {
+            headers: {
+              'X-Riot-Token': RIOT_API_KEY!,
+            },
+          }
+        );
+
+        if (matchesResponse.ok) {
+          const matchIds: string[] = await matchesResponse.json();
+          if (matchIds.length > 0) {
+            console.log(`  ✅ Found ${matchIds.length} matches in ${region}`);
+            
+            // Si encontramos más partidas en esta región, es probablemente donde juega
+            if (matchIds.length > allMatchIds.length) {
+              actualPlayRegion = region;
+              allMatchIds = matchIds;
+            }
+          }
+        }
+      } catch (err) {
+        console.log(`  ⚠️  No matches in ${region}`);
       }
-    );
-
-    if (!matchesResponse.ok) {
-      throw new Error('Failed to fetch match IDs');
     }
+    
+    console.log(`✅ Total: ${allMatchIds.length} match IDs from ${actualPlayRegion}`);
 
-    const allMatchIds: string[] = await matchesResponse.json();
-    console.log(`✅ Found ${allMatchIds.length} match IDs`);
+    // Update detected platform based on actual matches found
+    if (allMatchIds.length > 0) {
+      detectedPlatform = getPlatformRegion(allMatchIds[0]);
+      player.platform = detectedPlatform;
+      player.platformDisplay = getPlatformDisplayName(detectedPlatform);
+      console.log(`🎮 Detected game server: ${player.platformDisplay} (${detectedPlatform})`);
+    }
 
     if (allMatchIds.length === 0) {
       return NextResponse.json({
@@ -163,7 +292,7 @@ export async function GET(request: NextRequest) {
     const recentMatchIds = allMatchIds.slice(0, 30); // Get 30 most recent
     const matchDetailsPromises = recentMatchIds.map(async (matchId: string) => {
       try {
-        const matchData = await fetchMatchWithRetry(matchId);
+        const matchData = await fetchMatchWithRetry(matchId, actualPlayRegion);
         
         if (!matchData) {
           return null;
