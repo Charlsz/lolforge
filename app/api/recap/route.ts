@@ -6,6 +6,27 @@ import { generateYearRecapInsights } from '@/lib/ai-generator';
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 const REGION = 'americas';
 
+// Helper function to determine platform region from match region
+function getPlatformRegion(matchId: string): string {
+  if (matchId.startsWith('NA1_')) return 'na1';
+  if (matchId.startsWith('BR1_')) return 'br1';
+  if (matchId.startsWith('LA1_')) return 'la1'; // LAN
+  if (matchId.startsWith('LA2_')) return 'la2'; // LAS
+  if (matchId.startsWith('EUW1_')) return 'euw1';
+  if (matchId.startsWith('EUN1_')) return 'eun1';
+  if (matchId.startsWith('TR1_')) return 'tr1';
+  if (matchId.startsWith('RU_')) return 'ru';
+  if (matchId.startsWith('JP1_')) return 'jp1';
+  if (matchId.startsWith('KR_')) return 'kr';
+  if (matchId.startsWith('OC1_')) return 'oc1';
+  if (matchId.startsWith('PH2_')) return 'ph2';
+  if (matchId.startsWith('SG2_')) return 'sg2';
+  if (matchId.startsWith('TH2_')) return 'th2';
+  if (matchId.startsWith('TW2_')) return 'tw2';
+  if (matchId.startsWith('VN2_')) return 'vn2';
+  return 'na1'; // default
+}
+
 // Helper function to fetch match with retry logic
 async function fetchMatchWithRetry(matchId: string, retries = 2): Promise<any | null> {
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -211,14 +232,84 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
+    // Detect player's platform region from their matches
+    const PLATFORM = matches.length > 0 ? getPlatformRegion(matches[0].matchId) : 'na1';
+    console.log(`🌍 Detected platform region: ${PLATFORM}`);
+
     // Step 4: Analyze data
     const analyzer = new MatchAnalyzer(matches, player.puuid);
     const recap = analyzer.generateRecap(player);
 
-    // Step 5: Return recap WITHOUT AI insights (on-demand generation)
-    // AI insights will be generated when user clicks the button
+    // Step 5: Fetch additional data (ranked, mastery, live game) in parallel
+    console.log('🔍 Fetching additional player data...');
+    const additionalDataPromises = [
+      // Ranked info
+      fetch(`https://${PLATFORM}.api.riotgames.com/lol/league/v4/entries/by-puuid/${player.puuid}`, {
+        headers: { 'X-Riot-Token': RIOT_API_KEY! },
+      }).then(res => res.ok ? res.json() : []).catch(() => []),
+      
+      // Champion mastery (top 5)
+      fetch(`https://${PLATFORM}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${player.puuid}/top?count=5`, {
+        headers: { 'X-Riot-Token': RIOT_API_KEY! },
+      }).then(res => res.ok ? res.json() : []).catch(() => []),
+      
+      // Live game
+      fetch(`https://${PLATFORM}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${player.puuid}`, {
+        headers: { 'X-Riot-Token': RIOT_API_KEY! },
+      }).then(res => res.ok ? res.json() : null).catch(() => null),
+    ];
+
+    const [rankedData, masteryData, liveGameData] = await Promise.all(additionalDataPromises);
+
+    console.log('📊 Ranked data received:', rankedData.length, 'entries');
+    console.log('🎖️ Mastery data received:', masteryData.length, 'champions');
+    console.log('⚡ Live game data:', liveGameData ? 'Active' : 'Not in game');
+
+    // Transform ranked info
+    const rankedInfo = rankedData.map((entry: any) => ({
+      queueType: entry.queueType,
+      tier: entry.tier,
+      rank: entry.rank,
+      leaguePoints: entry.leaguePoints,
+      wins: entry.wins,
+      losses: entry.losses,
+      winRate: ((entry.wins / (entry.wins + entry.losses)) * 100),
+      veteran: entry.veteran || false,
+      hotStreak: entry.hotStreak || false,
+    }));
+
+    // Transform mastery info
+    const championMasteries = masteryData.slice(0, 5).map((mastery: any) => ({
+      championId: mastery.championId,
+      championLevel: mastery.championLevel,
+      championPoints: mastery.championPoints,
+      lastPlayTime: mastery.lastPlayTime,
+      tokensEarned: mastery.tokensEarned || 0,
+    }));
+
+    // Transform live game info
+    let liveGame = null;
+    if (liveGameData && liveGameData.participants) {
+      const participant = liveGameData.participants.find((p: any) => p.puuid === player.puuid);
+      if (participant) {
+        liveGame = {
+          gameId: liveGameData.gameId,
+          gameMode: liveGameData.gameMode,
+          gameStartTime: liveGameData.gameStartTime,
+          championId: participant.championId,
+          teamId: participant.teamId,
+        };
+      }
+    }
+
+    console.log(`✅ Additional data fetched: ${rankedInfo.length} ranked queues, ${championMasteries.length} masteries, live game: ${liveGame ? 'yes' : 'no'}`);
+
+    // Step 6: Return recap WITHOUT AI insights (on-demand generation)
     return NextResponse.json({
       ...recap,
+      rankedInfo,
+      championMasteries,
+      liveGame,
       aiInsights: null, // Don't generate automatically to save AWS costs
     });
   } catch (error) {

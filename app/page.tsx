@@ -102,7 +102,7 @@ export default function Home() {
         fill
         priority
         className="object-cover"
-        quality={100}
+        quality={75}
       />
 
       {/* Content */}

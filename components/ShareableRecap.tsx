@@ -46,6 +46,7 @@ const downloadSlide = async (slideId: string, filename: string) => {
 };
 
 export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProps) {
+  const currentYear = new Date().getFullYear();
   const sections = aiInsights.split('|||').filter(s => s.trim());
   
   // Parse sections into title and content
@@ -65,7 +66,7 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
       <div 
         className="w-full aspect-[9/16] bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#4338CA] rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
         id="recap-slide-1"
-        onClick={() => downloadSlide('recap-slide-1', `${player.gameName}-2024-cover.png`)}
+        onClick={() => downloadSlide('recap-slide-1', `${player.gameName}-${currentYear}-cover.png`)}
       >
         {/* Background decoration */}
         <div className="absolute inset-0 opacity-10">
@@ -82,7 +83,7 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
             className="mb-4"
           />
           <h1 className="text-4xl font-black text-white mb-2">
-            Your 2024
+            Your {currentYear}
           </h1>
           <h2 className="text-5xl font-black text-white">
             Wrapped
@@ -122,7 +123,7 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
       <div 
         className="w-full aspect-[9/16] bg-gradient-to-br from-[#23262A] to-[#1C1E22] rounded-2xl p-8 flex flex-col justify-center relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
         id="recap-slide-2"
-        onClick={() => downloadSlide('recap-slide-2', `${player.gameName}-2024-stats.png`)}
+        onClick={() => downloadSlide('recap-slide-2', `${player.gameName}-${currentYear}-stats.png`)}
       >
         <div className="absolute top-8 right-8">
           <Image
@@ -176,7 +177,7 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
           key={index}
           className="w-full aspect-[9/16] bg-gradient-to-br from-[#23262A] to-[#1C1E22] rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
           id={`recap-slide-${index + 3}`}
-          onClick={() => downloadSlide(`recap-slide-${index + 3}`, `${player.gameName}-2024-insight-${index + 1}.png`)}
+          onClick={() => downloadSlide(`recap-slide-${index + 3}`, `${player.gameName}-${currentYear}-insight-${index + 1}.png`)}
         >
           <div className="absolute top-8 right-8">
             <Image
@@ -216,7 +217,7 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
       <div 
         className="w-full aspect-[9/16] bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#4338CA] rounded-2xl p-8 flex flex-col justify-center items-center relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
         id="recap-slide-final"
-        onClick={() => downloadSlide('recap-slide-final', `${player.gameName}-2024-cta.png`)}
+        onClick={() => downloadSlide('recap-slide-final', `${player.gameName}-${currentYear}-cta.png`)}
       >
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 right-10 w-64 h-64 bg-white rounded-full blur-3xl"></div>

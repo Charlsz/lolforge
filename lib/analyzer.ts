@@ -1,4 +1,4 @@
-import { MatchInfo, ChampionStats, RoleStats, PlayerAccount, PlayerRecap, AdvancedMetrics, MonthlyTimeline, HighlightMoment, MatchParticipant } from './types';
+import { MatchInfo, ChampionStats, RoleStats, PlayerAccount, PlayerRecap, AdvancedMetrics, MonthlyTimeline, HighlightMoment, MatchParticipant, FunAchievement, PlaystyleAnalysis } from './types';
 
 export class MatchAnalyzer {
   private matches: MatchInfo[];
@@ -553,6 +553,198 @@ export class MatchAnalyzer {
     return highlights;
   }
 
+  // Calculate Fun Achievements (Quirky Stats)
+  public getFunAchievements(): FunAchievement[] {
+    const achievements: FunAchievement[] = [];
+
+    // Night Owl - Games played after 11pm
+    let nightGames = 0;
+    this.matches.forEach(match => {
+      const hour = new Date(match.gameCreation).getHours();
+      if (hour >= 23 || hour < 6) {
+        nightGames++;
+      }
+    });
+    if (nightGames >= 10) {
+      achievements.push({
+        id: 'night_owl',
+        title: 'Night Owl',
+        emoji: '🦉',
+        description: `Played ${nightGames} games after 11pm`,
+        value: nightGames,
+        rarity: nightGames > 50 ? 'legendary' : nightGames > 25 ? 'epic' : 'rare',
+      });
+    }
+
+    // Champion Loyalist - Most games on one champion
+    const topChamp = this.getTopChampions(1)[0];
+    if (topChamp && topChamp.games >= 20) {
+      achievements.push({
+        id: 'champion_loyalist',
+        title: 'Champion Loyalist',
+        emoji: '💙',
+        description: `${topChamp.games} games on ${topChamp.championName}`,
+        value: `${topChamp.championName} (${topChamp.games} games)`,
+        rarity: topChamp.games > 100 ? 'legendary' : topChamp.games > 50 ? 'epic' : 'rare',
+      });
+    }
+
+    // Comeback King - Games won from behind
+    let comebacks = 0;
+    this.matches.forEach(match => {
+      const playerData = this.getPlayerData(match);
+      if (playerData && playerData.win) {
+        // Check if we were behind (simple heuristic: deaths > kills early)
+        if (playerData.deaths > playerData.kills) {
+          comebacks++;
+        }
+      }
+    });
+    if (comebacks >= 5) {
+      achievements.push({
+        id: 'comeback_king',
+        title: 'Comeback King',
+        emoji: '👑',
+        description: `Won ${comebacks} games from behind`,
+        value: comebacks,
+        rarity: comebacks > 20 ? 'legendary' : comebacks > 10 ? 'epic' : 'rare',
+      });
+    }
+
+    // Perfect KDA - Games with 0 deaths
+    let perfectGames = 0;
+    this.matches.forEach(match => {
+      const playerData = this.getPlayerData(match);
+      if (playerData && playerData.deaths === 0) {
+        perfectGames++;
+      }
+    });
+    if (perfectGames >= 3) {
+      achievements.push({
+        id: 'untouchable',
+        title: 'Untouchable',
+        emoji: '🛡️',
+        description: `${perfectGames} games with 0 deaths`,
+        value: perfectGames,
+        rarity: perfectGames > 15 ? 'legendary' : perfectGames > 8 ? 'epic' : 'rare',
+      });
+    }
+
+    // Pentakill Hunter
+    let pentakills = 0;
+    this.matches.forEach(match => {
+      const playerData = this.getPlayerData(match);
+      // Approximation: 5+ kills in a single game with high kill participation
+      if (playerData && playerData.kills >= 15) {
+        pentakills++;
+      }
+    });
+    if (pentakills >= 1) {
+      achievements.push({
+        id: 'pentakill_hunter',
+        title: 'Pentakill Hunter',
+        emoji: '⚔️',
+        description: `${pentakills} games with 15+ kills`,
+        value: pentakills,
+        rarity: pentakills > 10 ? 'legendary' : pentakills > 5 ? 'epic' : 'rare',
+      });
+    }
+
+    // Early Bird - Games played before 9am
+    let earlyGames = 0;
+    this.matches.forEach(match => {
+      const hour = new Date(match.gameCreation).getHours();
+      if (hour >= 6 && hour < 9) {
+        earlyGames++;
+      }
+    });
+    if (earlyGames >= 10) {
+      achievements.push({
+        id: 'early_bird',
+        title: 'Early Bird',
+        emoji: '🌅',
+        description: `Played ${earlyGames} games before 9am`,
+        value: earlyGames,
+        rarity: earlyGames > 30 ? 'legendary' : earlyGames > 15 ? 'epic' : 'rare',
+      });
+    }
+
+    // Gold Hoarder - Average gold > 12k
+    let totalGold = 0;
+    let goldGames = 0;
+    this.matches.forEach(match => {
+      const playerData = this.getPlayerData(match);
+      if (playerData) {
+        totalGold += playerData.goldEarned;
+        goldGames++;
+      }
+    });
+    const avgGold = goldGames > 0 ? totalGold / goldGames : 0;
+    if (avgGold >= 12000) {
+      achievements.push({
+        id: 'gold_hoarder',
+        title: 'Gold Hoarder',
+        emoji: '💰',
+        description: `Average ${Math.round(avgGold).toLocaleString()}g per game`,
+        value: Math.round(avgGold),
+        rarity: avgGold > 15000 ? 'legendary' : avgGold > 13000 ? 'epic' : 'rare',
+      });
+    }
+
+    return achievements;
+  }
+
+  // Calculate Playstyle (basic heuristics - will be enhanced by AI)
+  public calculatePlaystyleMetrics(): PlaystyleAnalysis {
+    const overallStats = this.getOverallStats();
+    const advancedMetrics = this.getAdvancedMetrics();
+    
+    // Calculate trait scores (0-100)
+    const aggression = Math.min(100, (overallStats.averageKills / 8) * 100);
+    const teamwork = Math.min(100, (overallStats.averageAssists / 10) * 100);
+    const consistency = advancedMetrics.consistencyScore;
+    const mechanical = Math.min(100, overallStats.overallKDA * 10);
+    const strategic = Math.min(100, advancedMetrics.clutchFactor);
+
+    // Determine primary playstyle based on highest traits
+    const traits = { aggression, teamwork, consistency, mechanical, strategic };
+    const sorted = Object.entries(traits).sort((a, b) => b[1] - a[1]);
+    
+    let primary: PlaystyleAnalysis['primary'] = 'team_player';
+    let description = '';
+
+    if (aggression > 70 && mechanical > 60) {
+      primary = 'aggressive';
+      description = 'You thrive in high-risk, high-reward situations. Your aggressive playstyle keeps enemies on their toes.';
+    } else if (teamwork > 70 && strategic > 50) {
+      primary = 'team_player';
+      description = 'Your strength lies in enabling your team. You excel at setting up plays and supporting your carries.';
+    } else if (mechanical > 75 && aggression < 50) {
+      primary = 'solo_carry';
+      description = 'You prefer to take matters into your own hands. High mechanical skill and gold efficiency define your games.';
+    } else if (strategic > 70 && consistency > 60) {
+      primary = 'strategic';
+      description = 'You play with your brain, not just your hands. Calculated decisions and objective control are your forte.';
+    } else if (consistency > 70 && overallStats.averageDeaths < 5) {
+      primary = 'defensive';
+      description = 'Safety first. You minimize risks and maintain consistent performance across all games.';
+    }
+
+    // Determine secondary trait
+    const secondary = sorted[1][0] === 'aggression' ? 'aggressive' :
+                     sorted[1][0] === 'teamwork' ? 'team_player' :
+                     sorted[1][0] === 'mechanical' ? 'solo_carry' :
+                     sorted[1][0] === 'strategic' ? 'strategic' : 'defensive';
+
+    return {
+      primary,
+      secondary: secondary !== primary ? secondary : undefined,
+      description,
+      traits,
+      reasoning: `Based on ${overallStats.totalGames} games: ${overallStats.overallKDA.toFixed(2)} KDA, ${overallStats.overallWinRate.toFixed(1)}% WR, ${advancedMetrics.consistencyScore}% consistency`,
+    };
+  }
+
   // Generate complete recap
   public generateRecap(player: PlayerAccount): PlayerRecap {
     const overallStats = this.getOverallStats();
@@ -562,6 +754,8 @@ export class MatchAnalyzer {
     const advancedMetrics = this.getAdvancedMetrics();
     const monthlyTimeline = this.getMonthlyTimeline();
     const highlightMoments = this.getHighlightMoments();
+    const funAchievements = this.getFunAchievements();
+    const playstyle = this.calculatePlaystyleMetrics();
 
     return {
       player,
@@ -572,6 +766,8 @@ export class MatchAnalyzer {
       advancedMetrics,
       monthlyTimeline,
       highlightMoments,
+      funAchievements,
+      playstyle,
     };
   }
 }

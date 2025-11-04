@@ -108,6 +108,76 @@ export interface HighlightMoment {
   date: number; // timestamp
 }
 
+// Playstyle Classification (AI-powered)
+export interface PlaystyleAnalysis {
+  primary: 'aggressive' | 'defensive' | 'team_player' | 'solo_carry' | 'strategic';
+  secondary?: 'aggressive' | 'defensive' | 'team_player' | 'solo_carry' | 'strategic';
+  description: string;
+  traits: {
+    aggression: number; // 0-100
+    teamwork: number; // 0-100
+    consistency: number; // 0-100
+    mechanical: number; // 0-100
+    strategic: number; // 0-100
+  };
+  reasoning: string; // AI-generated explanation
+}
+
+// Fun/Quirky Achievements
+export interface FunAchievement {
+  id: string;
+  title: string;
+  emoji: string;
+  description: string;
+  value: number | string;
+  rarity?: 'common' | 'rare' | 'epic' | 'legendary';
+}
+
+// Ranked League Info
+export interface RankedInfo {
+  queueType: string; // RANKED_SOLO_5x5, RANKED_FLEX_SR
+  tier: string; // IRON, BRONZE, SILVER, GOLD, PLATINUM, EMERALD, DIAMOND, MASTER, GRANDMASTER, CHALLENGER
+  rank: string; // I, II, III, IV
+  leaguePoints: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  veteran: boolean;
+  hotStreak: boolean;
+}
+
+// Champion Mastery
+export interface ChampionMastery {
+  championId: number;
+  championName?: string;
+  championLevel: number;
+  championPoints: number;
+  lastPlayTime: number;
+  championPointsSinceLastLevel: number;
+  championPointsUntilNextLevel: number;
+  tokensEarned: number;
+  milestoneGrades?: string[];
+}
+
+// Live Game Info
+export interface LiveGameInfo {
+  gameId: number;
+  gameMode: string;
+  gameStartTime: number;
+  championId: number;
+  championName?: string;
+  teamId: number;
+}
+
+// Challenge Info
+export interface ChallengeInfo {
+  challengeId: number;
+  title?: string;
+  level: string; // NONE, IRON, BRONZE, SILVER, GOLD, PLATINUM, DIAMOND, MASTER, GRANDMASTER, CHALLENGER
+  value: number;
+  achievedTime?: number;
+}
+
 export interface PlayerRecap {
   player: PlayerAccount;
   totalGames: number;
@@ -124,7 +194,13 @@ export interface PlayerRecap {
   averageDeaths: number;
   averageAssists: number;
   advancedMetrics?: AdvancedMetrics;
-  monthlyTimeline?: MonthlyTimeline[]; // NEW!
-  highlightMoments?: HighlightMoment[]; // NEW!
+  monthlyTimeline?: MonthlyTimeline[];
+  highlightMoments?: HighlightMoment[];
+  playstyle?: PlaystyleAnalysis;
+  funAchievements?: FunAchievement[];
+  rankedInfo?: RankedInfo[]; // NEW!
+  championMasteries?: ChampionMastery[]; // NEW!
+  liveGame?: LiveGameInfo | null; // NEW!
+  topChallenges?: ChallengeInfo[]; // NEW!
   aiInsights?: string | null;
 }

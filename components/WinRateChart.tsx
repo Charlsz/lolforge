@@ -11,7 +11,7 @@ export default function WinRateChart({ wins, losses, winRate }: WinRateChartProp
   const lossRate = 100 - winRate;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 p-6 transition-all duration-300 hover:bg-white/50 dark:hover:bg-white/10 hover:shadow-xl">
+    <div className="relative overflow-hidden rounded-2xl bg-[#E0EDFF] dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 p-6 hover:shadow-xl">
       <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-6">
         Win Rate Distribution
       </h3>

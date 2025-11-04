@@ -28,6 +28,12 @@ import { ShareableRecap } from '@/components/ShareableRecap';
 import { TimelineChart } from '@/components/TimelineChart';
 import { HighlightMoments } from '@/components/HighlightMoments';
 import { SocialComparison } from '@/components/SocialComparison';
+import { PlaystyleCard } from '@/components/PlaystyleCard';
+import { FunAchievements } from '@/components/FunAchievements';
+import { SocialShare } from '@/components/SocialShare';
+import { RankedCard } from '@/components/RankedCard';
+import { ChampionMasteryCard } from '@/components/ChampionMasteryCard';
+import { LiveGameBadge } from '@/components/LiveGameBadge';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -78,6 +84,9 @@ export default function RecapPage() {
 
         const data = await response.json();
         console.log('Recap data received:', data);
+        console.log('🏆 Ranked info:', data.rankedInfo);
+        console.log('🎖️ Mastery info:', data.championMasteries);
+        console.log('⚡ Live game:', data.liveGame);
         setRecap(data);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load your recap. Please try again.';
@@ -391,18 +400,50 @@ export default function RecapPage() {
               </div>
             )}
 
-            {/* Timeline Charts - NEW! */}
+            {/* Live Game Badge - Always show */}
+            <LiveGameBadge liveGame={recap.liveGame} />
+
+            {/* Ranked Info - Always show */}
+            <RankedCard rankedInfo={recap.rankedInfo || []} />
+
+            {/* Champion Mastery - Always show */}
+            <ChampionMasteryCard 
+              masteries={recap.championMasteries || []} 
+              topChampions={recap.topChampions}
+            />
+
+            {/* Playstyle Analysis - AI-powered */}
+            {recap.playstyle && (
+              <PlaystyleCard playstyle={recap.playstyle} />
+            )}
+
+            {/* Fun Achievements - NEW! */}
+            {recap.funAchievements && recap.funAchievements.length > 0 && (
+              <FunAchievements achievements={recap.funAchievements} />
+            )}
+
+            {/* Timeline Charts */}
             {recap.monthlyTimeline && recap.monthlyTimeline.length > 0 && (
               <TimelineChart data={recap.monthlyTimeline} />
             )}
 
-            {/* Highlight Moments - NEW! */}
+            {/* Highlight Moments */}
             {recap.highlightMoments && recap.highlightMoments.length > 0 && (
               <HighlightMoments highlights={recap.highlightMoments} />
             )}
 
-            {/* Social Comparison - NEW! */}
+            {/* Social Comparison */}
             <SocialComparison currentPlayer={recap} />
+
+            {/* Social Share - NEW! */}
+            <SocialShare 
+              gameName={recap.player.gameName}
+              wins={recap.wins}
+              losses={recap.losses}
+              winRate={recap.overallWinRate}
+              kda={recap.overallKDA}
+              topChampion={recap.topChampions[0]?.championName || 'N/A'}
+            />
 
             {/* AI Insights - 4 Grid Layout */}
             <div className="relative overflow-hidden">{aiInsights || recap.aiInsights ? (
