@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChampionMastery } from '@/lib/types';
 
 interface ChampionMasteryCardProps {
@@ -11,46 +11,74 @@ interface ChampionMasteryCardProps {
 
 const DDRAGON_VERSION = '14.23.1';
 
-// Champion ID to Name mapping (actualizado con todos los campeones)
-const CHAMPION_ID_MAP: { [key: number]: string } = {
-  1: 'Annie', 2: 'Olaf', 3: 'Galio', 4: 'TwistedFate', 5: 'XinZhao',
-  6: 'Urgot', 7: 'LeBlanc', 8: 'Vladimir', 9: 'Fiddlesticks', 10: 'Kayle',
-  11: 'MasterYi', 12: 'Alistar', 13: 'Ryze', 14: 'Sion', 15: 'Sivir',
-  16: 'Soraka', 17: 'Teemo', 18: 'Tristana', 19: 'Warwick', 20: 'Nunu',
-  21: 'MissFortune', 22: 'Ashe', 23: 'Tryndamere', 24: 'Jax', 25: 'Morgana',
-  26: 'Zilean', 27: 'Singed', 28: 'Evelynn', 29: 'Twitch', 30: 'Karthus',
-  31: 'Chogath', 32: 'Amumu', 33: 'Rammus', 34: 'Anivia', 35: 'Shaco',
-  36: 'DrMundo', 37: 'Sona', 38: 'Kassadin', 39: 'Irelia', 40: 'Janna',
-  41: 'Gangplank', 42: 'Corki', 43: 'Karma', 44: 'Taric', 45: 'Veigar',
-  46: 'Trundle', 48: 'Trundle', 50: 'Swain', 51: 'Caitlyn', 53: 'Blitzcrank',
-  54: 'Malphite', 55: 'Katarina', 56: 'Nocturne', 57: 'Maokai', 58: 'Renekton',
-  59: 'JarvanIV', 60: 'Elise', 61: 'Orianna', 62: 'MonkeyKing', 63: 'Brand',
-  64: 'LeeSin', 67: 'Vayne', 68: 'Rumble', 69: 'Cassiopeia', 72: 'Skarner',
-  74: 'Heimerdinger', 75: 'Nasus', 76: 'Nidalee', 77: 'Udyr', 78: 'Poppy',
-  79: 'Gragas', 80: 'Pantheon', 81: 'Ezreal', 82: 'Mordekaiser', 83: 'Yorick',
-  84: 'Akali', 85: 'Kennen', 86: 'Garen', 89: 'Leona', 90: 'Malzahar',
-  91: 'Talon', 92: 'Riven', 96: 'KogMaw', 98: 'Shen', 99: 'Lux',
-  101: 'Xerath', 102: 'Shyvana', 103: 'Ahri', 104: 'Graves', 105: 'Fizz',
-  106: 'Volibear', 107: 'Rengar', 110: 'Varus', 111: 'Nautilus', 112: 'Viktor',
-  113: 'Sejuani', 114: 'Fiora', 115: 'Ziggs', 117: 'Lulu', 119: 'Draven',
-  120: 'Hecarim', 121: 'Khazix', 122: 'Darius', 126: 'Jayce', 127: 'Lissandra',
-  131: 'Diana', 133: 'Quinn', 134: 'Syndra', 136: 'AurelionSol', 141: 'Kayn',
-  142: 'Zoe', 143: 'Zyra', 145: 'Kaisa', 147: 'Seraphine', 150: 'Gnar',
-  154: 'Zac', 157: 'Yasuo', 161: 'Velkoz', 163: 'Taliyah', 164: 'Camille',
-  166: 'Akshan', 200: 'Belveth', 201: 'Braum', 202: 'Jhin', 203: 'Kindred',
-  221: 'Zeri', 222: 'Jinx', 223: 'TahmKench', 233: 'Briar', 234: 'Viego',
-  235: 'Senna', 236: 'Lucian', 238: 'Zed', 240: 'Kled', 245: 'Ekko',
-  246: 'Qiyana', 254: 'Vi', 266: 'Aatrox', 267: 'Nami', 268: 'Azir',
-  350: 'Yuumi', 360: 'Samira', 412: 'Thresh', 420: 'Illaoi', 421: 'RekSai',
-  427: 'Ivern', 429: 'Kalista', 432: 'Bard', 497: 'Rakan', 498: 'Xayah',
-  516: 'Ornn', 517: 'Sylas', 518: 'Neeko', 523: 'Aphelios', 526: 'Rell',
-  555: 'Pyke', 711: 'Vex', 777: 'Yone', 875: 'Sett', 876: 'Lillia',
-  887: 'Gwen', 888: 'Renata', 893: 'Aurora', 895: 'Nilah', 897: 'KSante',
-  901: 'Smolder', 902: 'Milio', 910: 'Hwei', 950: 'Naafiri'
-};
+// Cache global para el mapeo de campeones (se carga una sola vez)
+let championIdMapCache: { [key: number]: string } | null = null;
+let championDataPromise: Promise<void> | null = null;
+
+// Función para cargar datos de campeones desde Data Dragon
+async function loadChampionData(): Promise<{ [key: number]: string }> {
+  if (championIdMapCache) {
+    return championIdMapCache;
+  }
+
+  if (!championDataPromise) {
+    championDataPromise = (async () => {
+      try {
+        const response = await fetch(`https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/data/en_US/champion.json`);
+        const data = await response.json();
+        
+        const idMap: { [key: number]: string } = {};
+        Object.values(data.data).forEach((champ: any) => {
+          idMap[parseInt(champ.key)] = champ.id;
+        });
+        
+        championIdMapCache = idMap;
+      } catch (error) {
+        console.error('Error loading champion data:', error);
+        championIdMapCache = {};
+      }
+    })();
+  }
+
+  await championDataPromise;
+  return championIdMapCache || {};
+}
 
 export function ChampionMasteryCard({ masteries, topChampions, isLoading = false }: ChampionMasteryCardProps) {
-  if (isLoading) {
+  const [enrichedMasteries, setEnrichedMasteries] = useState<Array<ChampionMastery & { championName: string }>>([]);
+  const [isLoadingChampions, setIsLoadingChampions] = useState(true);
+
+  useEffect(() => {
+    async function enrichMasteryData() {
+      setIsLoadingChampions(true);
+      
+      // Cargar datos de campeones desde Data Dragon
+      const championIdMap = await loadChampionData();
+      
+      // Enriquecer masteries con nombres de campeones
+      const enriched = masteries.map(mastery => {
+        // Primero intenta con el mapa de Data Dragon
+        const championNameFromId = championIdMap[mastery.championId];
+        
+        // Fallback a topChampions si está disponible
+        const matchedChamp = topChampions.find(c => c.championId === mastery.championId);
+        
+        return {
+          ...mastery,
+          championName: championNameFromId || matchedChamp?.championName || `Champion${mastery.championId}`,
+        };
+      });
+      
+      setEnrichedMasteries(enriched);
+      setIsLoadingChampions(false);
+    }
+
+    if (masteries && masteries.length > 0) {
+      enrichMasteryData();
+    }
+  }, [masteries, topChampions]);
+
+  if (isLoading || isLoadingChampions) {
     return (
       <div className="bg-[#1C1E22] rounded-lg p-6 border border-[#E0EDFF]/10">
         <div className="mb-6">
@@ -82,20 +110,6 @@ export function ChampionMasteryCard({ masteries, topChampions, isLoading = false
       </div>
     );
   }
-
-  // Match mastery data with champion names from CHAMPION_ID_MAP first, then topChampions as fallback
-  const enrichedMasteries = masteries.map(mastery => {
-    // First try to get name from our ID map
-    const championNameFromId = CHAMPION_ID_MAP[mastery.championId];
-    
-    // Fallback to topChampions if available
-    const matchedChamp = topChampions.find(c => c.championId === mastery.championId);
-    
-    return {
-      ...mastery,
-      championName: championNameFromId || matchedChamp?.championName || `Champion${mastery.championId}`,
-    };
-  });
 
   // Helper to get correct champion key for Data Dragon (some champs have different keys)
   const getChampionImageKey = (championName: string) => {
