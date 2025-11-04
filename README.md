@@ -199,7 +199,7 @@ The AI analyzes your match data and provides human-readable insights in real-tim
 | **Styling** | Tailwind CSS 4.0 |
 | **AI** | AWS Bedrock (Claude Haiku) |
 | **APIs** | Riot Games API, Data Dragon |
-| **Deployment** | Vercel (recommended) |
+| **Deployment** | AWS Amplify |
 | **Icons** | Community Dragon, Data Dragon |
 
 ## Rate Limits & Best Practices
