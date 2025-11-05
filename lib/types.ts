@@ -9,6 +9,9 @@ export interface PlayerAccount {
   platformDisplay?: string; // Display name (NA, EUW, EUNE, LAN, etc.)
 }
 
+// Year filter type - dynamic, based on available match data
+export type YearFilter = 'all' | string; // 'all' or year as string like '2025', '2024', etc.
+
 // Match types
 export interface MatchParticipant {
   puuid: string;
@@ -37,6 +40,7 @@ export interface MatchInfo {
   gameCreation: number;
   gameDuration: number;
   gameMode: string;
+  queueId: number; // Queue type (420 = Ranked Solo, 440 = Ranked Flex, etc.)
   participants: MatchParticipant[];
 }
 

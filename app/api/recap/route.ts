@@ -240,32 +240,61 @@ export async function GET(request: NextRequest) {
     let allMatchIds: string[] = [];
     let actualPlayRegion = routingRegion; // Región donde tiene más partidas
     
-    // Intentar obtener partidas de todas las regiones
+    console.log(`📥 Fetching ALL available matches...`);
+    
+    // Intentar obtener partidas de todas las regiones con paginación
     for (const region of ROUTING_REGIONS) {
       try {
-        const matchesResponse = await fetch(
-          `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${player.puuid}/ids?start=0&count=100`,
-          {
-            headers: {
-              'X-Riot-Token': RIOT_API_KEY!,
-            },
-          }
-        );
-
-        if (matchesResponse.ok) {
-          const matchIds: string[] = await matchesResponse.json();
-          if (matchIds.length > 0) {
-            console.log(`  ✅ Found ${matchIds.length} matches in ${region}`);
-            
-            // Si encontramos más partidas en esta región, es probablemente donde juega
-            if (matchIds.length > allMatchIds.length) {
-              actualPlayRegion = region;
-              allMatchIds = matchIds;
+        let regionMatchIds: string[] = [];
+        let start = 0;
+        const count = 100; // Max per request
+        let hasMore = true;
+        
+        // Paginar hasta obtener todas las partidas (máximo 1000 para evitar rate limits)
+        while (hasMore && start < 1000) {
+          const matchesResponse = await fetch(
+            `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${player.puuid}/ids?start=${start}&count=${count}`,
+            {
+              headers: {
+                'X-Riot-Token': RIOT_API_KEY!,
+              },
             }
+          );
+
+          if (matchesResponse.ok) {
+            const matchIds: string[] = await matchesResponse.json();
+            
+            if (matchIds.length > 0) {
+              regionMatchIds.push(...matchIds);
+              console.log(`  📦 Fetched ${matchIds.length} matches from ${region} (offset ${start})`);
+              
+              // Si obtenemos menos de 100, ya no hay más
+              if (matchIds.length < count) {
+                hasMore = false;
+              } else {
+                start += count;
+                // Small delay to respect rate limits
+                await new Promise(resolve => setTimeout(resolve, 50));
+              }
+            } else {
+              hasMore = false;
+            }
+          } else {
+            hasMore = false;
+          }
+        }
+        
+        if (regionMatchIds.length > 0) {
+          console.log(`  ✅ Total ${regionMatchIds.length} matches found in ${region}`);
+          
+          // Si encontramos más partidas en esta región, es probablemente donde juega
+          if (regionMatchIds.length > allMatchIds.length) {
+            actualPlayRegion = region;
+            allMatchIds = regionMatchIds;
           }
         }
       } catch (err) {
-        console.log(`  ⚠️  No matches in ${region}`);
+        console.log(`  ⚠️  Error fetching matches from ${region}`);
       }
     }
     
@@ -289,8 +318,14 @@ export async function GET(request: NextRequest) {
     // Fetch recent matches first to check metadata
     console.log(`📥 Fetching match details with smart filtering...`);
     
-    const recentMatchIds = allMatchIds.slice(0, 30); // Get 30 most recent
-    const matchDetailsPromises = recentMatchIds.map(async (matchId: string) => {
+    // Process ALL matches (not just recent 30) but with date filter
+    // We'll fetch matches and filter by Ranked Solo + last 2 years
+    console.log(`🔍 Processing up to ${Math.min(allMatchIds.length, 500)} matches (Ranked Solo only)...`);
+    
+    const maxMatchesToProcess = Math.min(allMatchIds.length, 500); // Max 500 to avoid timeout
+    const twoYearsAgo = Date.now() - (2 * 365 * 24 * 60 * 60 * 1000); // 2 years in milliseconds
+    
+    const matchDetailsPromises = allMatchIds.slice(0, maxMatchesToProcess).map(async (matchId: string) => {
       try {
         const matchData = await fetchMatchWithRetry(matchId, actualPlayRegion);
         
@@ -300,18 +335,24 @@ export async function GET(request: NextRequest) {
 
         const queueId = matchData.info.queueId;
         const gameDuration = matchData.info.gameDuration;
+        const gameCreation = matchData.info.gameCreation;
         
-        // Smart filtering:
-        // 420 = Ranked Solo/Duo, 440 = Ranked Flex
-        // 400 = Normal Draft, 430 = Normal Blind (include for broader recap)
-        const isRanked = queueId === 420 || queueId === 440;
-        const isNormal = queueId === 400 || queueId === 430;
-        const isValidQueue = isRanked || isNormal;
+        // Filter by date: only last 2 years
+        if (gameCreation < twoYearsAgo) {
+          return null;
+        }
+        
+        // FILTER: Only Ranked Solo/Duo (queueId 420)
+        // 420 = Ranked Solo/Duo ✓
+        // 440 = Ranked Flex (excluded)
+        // 400 = Normal Draft (excluded)
+        // 430 = Normal Blind (excluded)
+        // 450 = ARAM (excluded)
+        const isRankedSolo = queueId === 420;
         const isValidDuration = gameDuration >= 900; // >15 minutes (900 seconds)
         
-        // Filter: only ranked/normal games that lasted >15 min
-        if (!isValidQueue || !isValidDuration) {
-          console.log(`⏭️ Skipping match ${matchId} (Queue: ${queueId}, Duration: ${Math.floor(gameDuration/60)}m)`);
+        // Only include Ranked Solo games that lasted >15 min
+        if (!isRankedSolo || !isValidDuration) {
           return null;
         }
         
@@ -320,6 +361,7 @@ export async function GET(request: NextRequest) {
           gameCreation: matchData.info.gameCreation,
           gameDuration: matchData.info.gameDuration,
           gameMode: matchData.info.gameMode,
+          queueId: matchData.info.queueId,
           participants: matchData.info.participants.map((p: any) => ({
             puuid: p.puuid,
             summonerName: p.riotIdGameName || p.summonerName,
@@ -353,7 +395,7 @@ export async function GET(request: NextRequest) {
     const matches = (await Promise.all(matchDetailsPromises))
       .filter((match: MatchInfo | null): match is MatchInfo => match !== null);
 
-    console.log(`✅ Successfully fetched ${matches.length} valid matches (filtered from ${recentMatchIds.length})`);
+    console.log(`✅ Successfully fetched ${matches.length} Ranked Solo matches (from ${maxMatchesToProcess} processed)`);
 
     if (matches.length === 0) {
       return NextResponse.json({

@@ -6,13 +6,15 @@ import { MatchInfo } from '@/lib/types';
 interface MatchHistoryProps {
   matches: MatchInfo[];
   playerPuuid: string;
+  maxMatches?: number; // Configurable max matches to display
 }
 
 const DDRAGON_VERSION = '14.23.1';
 
-export function MatchHistory({ matches, playerPuuid }: MatchHistoryProps) {
-  // Take last 20 matches for display
-  const recentMatches = matches.slice(0, 20);
+export function MatchHistory({ matches, playerPuuid, maxMatches = 30 }: MatchHistoryProps) {
+  // Take last N matches for display (default 30, max 40)
+  const displayLimit = Math.min(maxMatches, 40);
+  const recentMatches = matches.slice(0, displayLimit);
 
   const getPlayerData = (match: MatchInfo) => {
     return match.participants.find(p => p.puuid === playerPuuid);
@@ -38,9 +40,7 @@ export function MatchHistory({ matches, playerPuuid }: MatchHistoryProps) {
   };
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-xl font-bold text-[#FFFAFA] mb-4">Match History</h2>
-      
+    <div className="space-y-3 p-6">
       {recentMatches.map((match) => {
         const playerData = getPlayerData(match);
         if (!playerData) return null;

@@ -20,6 +20,7 @@ interface ShareableRecapProps {
     topChampionWR: number;
   };
   aiInsights: string;
+  yearFilter?: string; // Add year filter prop
 }
 
 const DDRAGON_VERSION = '14.23.1';
@@ -45,20 +46,24 @@ const downloadSlide = async (slideId: string, filename: string) => {
   }
 };
 
-export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProps) {
-  const currentYear = new Date().getFullYear();
-  const sections = aiInsights.split('|||').filter(s => s.trim());
+export function ShareableRecap({ player, stats, aiInsights, yearFilter = 'all' }: ShareableRecapProps) {
+  const displayYear = yearFilter === 'all' ? 'Career' : yearFilter;
   
-  // Parse sections into title and content
+  // Parse sections: AI returns "TITLE|||CONTENT|||TITLE|||CONTENT"
+  const parts = aiInsights.split('|||').map(s => s.trim()).filter(s => s.length > 0);
+  
+  // Group into pairs: [title, content, title, content] -> [{title, content}, {title, content}]
   const parsedSections = [];
-  for (let i = 0; i < sections.length; i += 2) {
-    if (sections[i] && sections[i + 1]) {
+  for (let i = 0; i < parts.length; i += 2) {
+    if (parts[i] && parts[i + 1]) {
       parsedSections.push({
-        title: sections[i].trim(),
-        content: sections[i + 1].trim()
+        title: parts[i],
+        content: parts[i + 1]
       });
     }
   }
+  
+  console.log('Parsed sections:', parsedSections.length, parsedSections);
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,7 +71,7 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
       <div 
         className="w-full aspect-[9/16] bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#4338CA] rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
         id="recap-slide-1"
-        onClick={() => downloadSlide('recap-slide-1', `${player.gameName}-${currentYear}-cover.png`)}
+        onClick={() => downloadSlide('recap-slide-1', `${player.gameName}-${displayYear}-cover.png`)}
       >
         {/* Background decoration */}
         <div className="absolute inset-0 opacity-10">
@@ -83,16 +88,16 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
             className="mb-4"
           />
           <h1 className="text-4xl font-black text-white mb-2">
-            Your {currentYear}
+            Your {displayYear}
           </h1>
-          <h2 className="text-5xl font-black text-white">
+          <h2 className="text-6xl font-black text-white">
             Wrapped
           </h2>
         </div>
 
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white/30">
+            <div className="w-20 h-20 rounded-2xl overflow-hidden border-3 border-white/40 shadow-xl">
               <img 
                 src={`https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/profileicon/${player.profileIconId || 29}.png`}
                 alt="Profile"
@@ -100,30 +105,30 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
               />
             </div>
             <div>
-              <div className="text-white font-bold text-xl">
+              <div className="text-white font-black text-2xl">
                 {player.gameName}
               </div>
-              <div className="text-white/70 text-sm">
+              <div className="text-white/80 text-lg">
                 #{player.tagLine}
               </div>
             </div>
           </div>
           
-          <div className="text-white/80 text-sm">
-            {stats.totalGames} games analyzed
+          <div className="text-white/90 text-base font-semibold">
+            {stats.totalGames} games • {displayYear} recap
           </div>
         </div>
 
         <div className="absolute bottom-4 right-4 text-white/40 text-xs">
-          Click to download
+          Tap to save
         </div>
       </div>
 
-      {/* Slide 2: Stats Overview */}
+      {/* Slide 2: Stats Overview - More Visual */}
       <div 
         className="w-full aspect-[9/16] bg-gradient-to-br from-[#23262A] to-[#1C1E22] rounded-2xl p-8 flex flex-col justify-center relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
         id="recap-slide-2"
-        onClick={() => downloadSlide('recap-slide-2', `${player.gameName}-${currentYear}-stats.png`)}
+        onClick={() => downloadSlide('recap-slide-2', `${player.gameName}-${displayYear}-stats.png`)}
       >
         <div className="absolute top-8 right-8">
           <Image
@@ -135,49 +140,49 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
           />
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-10">
           <div className="text-center">
-            <div className="text-[#E0EDFF]/60 text-sm mb-2">Your Win Rate</div>
-            <div className={`text-7xl font-black ${stats.winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
-              {stats.winRate.toFixed(1)}%
+            <div className="text-[#E0EDFF]/60 text-base font-semibold mb-3 uppercase tracking-wider">Win Rate</div>
+            <div className={`text-8xl font-black mb-3 ${stats.winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
+              {stats.winRate.toFixed(0)}%
             </div>
-            <div className="text-[#E0EDFF]/60 text-sm mt-2">
-              {stats.wins}W / {stats.losses}L
+            <div className="text-[#E0EDFF]/80 text-lg font-medium">
+              {stats.wins}W - {stats.losses}L
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-[#6366F1]/10 rounded-xl p-4 text-center border border-[#6366F1]/20">
-              <div className="text-[#E0EDFF]/60 text-xs mb-1">KDA</div>
-              <div className="text-3xl font-bold text-white">{stats.kda.toFixed(2)}</div>
+            <div className="bg-gradient-to-br from-[#6366F1]/20 to-[#6366F1]/5 rounded-2xl p-6 text-center border-2 border-[#6366F1]/30">
+              <div className="text-[#E0EDFF]/70 text-sm font-semibold mb-2 uppercase tracking-wide">KDA</div>
+              <div className="text-4xl font-black text-white">{stats.kda.toFixed(1)}</div>
             </div>
-            <div className="bg-[#6366F1]/10 rounded-xl p-4 text-center border border-[#6366F1]/20">
-              <div className="text-[#E0EDFF]/60 text-xs mb-1">Games</div>
-              <div className="text-3xl font-bold text-white">{stats.totalGames}</div>
+            <div className="bg-gradient-to-br from-[#6366F1]/20 to-[#6366F1]/5 rounded-2xl p-6 text-center border-2 border-[#6366F1]/30">
+              <div className="text-[#E0EDFF]/70 text-sm font-semibold mb-2 uppercase tracking-wide">Games</div>
+              <div className="text-4xl font-black text-white">{stats.totalGames}</div>
             </div>
           </div>
 
-          <div className="bg-[#6366F1]/10 rounded-xl p-4 border border-[#6366F1]/20">
-            <div className="text-[#E0EDFF]/60 text-xs mb-2 text-center">Your Best Champion</div>
-            <div className="text-2xl font-bold text-white text-center">{stats.topChampion}</div>
-            <div className="text-[#6366F1] text-lg font-semibold text-center mt-1">
-              {stats.topChampionWR.toFixed(1)}% WR
+          <div className="bg-gradient-to-br from-[#6366F1]/20 to-[#4338CA]/20 rounded-2xl p-6 border-2 border-[#6366F1]/40">
+            <div className="text-[#E0EDFF]/70 text-sm font-semibold mb-3 text-center uppercase tracking-wide">Your Main</div>
+            <div className="text-3xl font-black text-white text-center mb-2">{stats.topChampion}</div>
+            <div className="text-[#6366F1] text-2xl font-black text-center">
+              {stats.topChampionWR.toFixed(0)}% Win Rate
             </div>
           </div>
         </div>
 
         <div className="absolute bottom-4 right-4 text-white/40 text-xs">
-          Click to download
+          Tap to save
         </div>
       </div>
 
-      {/* Slides 3-6: AI Insights (one per section) */}
+      {/* Slides 3-6: AI Insights - Shorter and punchier */}
       {parsedSections.map((section, index) => (
         <div 
           key={index}
-          className="w-full aspect-[9/16] bg-gradient-to-br from-[#23262A] to-[#1C1E22] rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
+          className="w-full aspect-[9/16] bg-gradient-to-br from-[#23262A] to-[#1C1E22] rounded-2xl p-10 flex flex-col justify-between relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
           id={`recap-slide-${index + 3}`}
-          onClick={() => downloadSlide(`recap-slide-${index + 3}`, `${player.gameName}-${currentYear}-insight-${index + 1}.png`)}
+          onClick={() => downloadSlide(`recap-slide-${index + 3}`, `${player.gameName}-${displayYear}-insight-${index + 1}.png`)}
         >
           <div className="absolute top-8 right-8">
             <Image
@@ -185,39 +190,39 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
               alt="LOLFORGE"
               width={40}
               height={40}
-              className="opacity-50"
+              className="opacity-30"
             />
           </div>
 
           <div className="flex-1 flex flex-col justify-center">
-            <div className="mb-6">
-              <div className="text-[#6366F1] text-sm font-semibold mb-2 uppercase tracking-wider">
+            <div className="mb-10">
+              <div className="text-[#6366F1] text-lg font-black mb-4 uppercase tracking-[0.15em]">
                 {section.title}
               </div>
-              <div className="h-1 w-16 bg-[#6366F1] rounded-full"></div>
+              <div className="h-1.5 w-24 bg-gradient-to-r from-[#6366F1] to-[#4338CA] rounded-full"></div>
             </div>
             
-            <p className="text-[#FFFAFA] text-xl leading-relaxed">
+            <p className="text-[#FFFAFA] text-2xl font-bold leading-relaxed">
               {section.content}
             </p>
           </div>
 
-          <div className="flex justify-between items-center">
-            <div className="text-[#E0EDFF]/40 text-xs">
-              {index + 1} of {parsedSections.length}
+          <div className="flex justify-between items-center pt-4">
+            <div className="text-[#E0EDFF]/50 text-sm font-bold">
+              {index + 1} / {parsedSections.length}
             </div>
             <div className="text-white/40 text-xs">
-              Click to download
+              Tap to save
             </div>
           </div>
         </div>
       ))}
 
-      {/* Final Slide: CTA */}
+      {/* Final Slide: CTA - More engaging */}
       <div 
         className="w-full aspect-[9/16] bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#4338CA] rounded-2xl p-8 flex flex-col justify-center items-center relative overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
         id="recap-slide-final"
-        onClick={() => downloadSlide('recap-slide-final', `${player.gameName}-${currentYear}-cta.png`)}
+        onClick={() => downloadSlide('recap-slide-final', `${player.gameName}-${displayYear}-cta.png`)}
       >
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-10 right-10 w-64 h-64 bg-white rounded-full blur-3xl"></div>
@@ -228,26 +233,28 @@ export function ShareableRecap({ player, stats, aiInsights }: ShareableRecapProp
           <Image
             src="/logo.png"
             alt="LOLFORGE"
-            width={80}
-            height={80}
-            className="mx-auto mb-6"
+            width={100}
+            height={100}
+            className="mx-auto mb-8"
           />
           
-          <h2 className="text-4xl font-black text-white mb-4">
-            Ready to level up<br />in 2025?
+          <h2 className="text-5xl font-black text-white mb-6 leading-tight">
+            Get Your<br />Wrapped
           </h2>
           
-          <p className="text-white/80 text-lg mb-8">
-            Get your own personalized recap
+          <p className="text-white/90 text-xl font-semibold mb-10">
+            Discover your League stats
           </p>
 
-          <div className="text-white/60 text-sm">
-            lolforge.app
+          <div className="bg-white/20 backdrop-blur-md px-8 py-4 rounded-2xl border-2 border-white/40">
+            <div className="text-white font-black text-2xl tracking-wide">
+              lolforge.app
+            </div>
           </div>
         </div>
 
         <div className="absolute bottom-4 right-4 text-white/40 text-xs">
-          Click to download
+          Tap to save
         </div>
       </div>
     </div>
